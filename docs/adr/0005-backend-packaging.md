@@ -1,6 +1,6 @@
 # ADR-0005: Backend packaged with a bundled Python runtime
 
-- Status: Proposed (2026-10-25)
+- Status: Accepted (2026-10-25)
 - Ticket: TC-14
 
 ## Context

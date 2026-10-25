@@ -1,6 +1,6 @@
 # ADR-0006: TypeScript client generated from OpenAPI
 
-- Status: Proposed (2026-10-25)
+- Status: Accepted (2026-10-25)
 - Ticket: TC-13
 
 ## Context
