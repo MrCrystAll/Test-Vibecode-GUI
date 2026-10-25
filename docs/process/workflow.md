@@ -77,8 +77,13 @@ developer/QA whose track it is. Blocks that need a decision (not a ticket) are o
 - Merge = **squash merge** by the reviewer once approved and CI is green, then tag (see below) and move the ticket to In Test.
   Always pin the approved commit so a late push can't slip in or get lost:
   `gh pr merge <n> --squash --match-head-commit <approved full SHA>`.
-  `.claude/settings.json` allows `gh pr merge` for the agents. Only run it on a PR that carries a `[DEV-x] APPROVED`
-  review from the *other* developer (or a developer, for QA PRs) and the `reviewed` label.
+  **Who merges:** the agents' sessions are usually refused `gh pr merge` by Claude Code's safety check (every agent is
+  the same GitHub account, so it looks like self-merging). So the reviewer, once the approval is posted, messages the
+  **supervisor** with `PR #, approved SHA` (batch several in one message). The supervisor merges under the owner's
+  standing authorization (2026-10-25) when the PR has: a `[DEV-x] APPROVED at <sha>` from an agent other than the
+  author, the `reviewed` label, a head equal to that SHA, and green CI once CI exists. The supervisor then tags,
+  moves the ticket to In Test, applies the unblocking rule and messages `qa`. A reviewer whose own merge does go
+  through may finish those steps themselves.
 - **ADRs:** the PR sets the ADR to `Status: Accepted (YYYY-MM-DD)` before approval; merging the PR *is* the acceptance.
   A rejected ADR is closed, not merged. Superseding happens in a new ADR.
 - Release PRs `dev → main` are opened by the supervisor after QA signs off an epic, and merged with a merge commit.
