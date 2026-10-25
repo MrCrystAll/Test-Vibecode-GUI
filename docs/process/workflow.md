@@ -1,7 +1,8 @@
 # Team workflow
 
 Four AI agents and a supervisor work this repo, coordinated through **Jira project `TC`**
-(https://mathsuch63.atlassian.net, cloudId `7cf42fa5-f7fa-41ec-9758-6dd34429a227`) and git.
+(https://mathsuch63.atlassian.net, cloudId `7cf42fa5-f7fa-41ec-9758-6dd34429a227`) and git
+(GitHub: https://github.com/MrCrystAll/Test-Vibecode-GUI, private; use `gh`).
 All agents share one human's Jira/GitHub identity, so **every Jira comment, PR description and PR review starts
 with a role tag**: `[PO]`, `[DEV-A]`, `[DEV-B]`, `[QA]`, `[SUPERVISOR]`.
 
@@ -81,3 +82,6 @@ Developers never pick up `blocked` tickets.
   into the ticket.
 - Agents can message each other directly (SendMessage / ListAgents by session name). Keep messages short and actionable.
 - Escalation path: developer/QA → PO (product questions) → supervisor (process / cross-team) → human owner.
+- **Upstream (rlgym-learn / rlgym-learn-algos):** never open issues or PRs upstream. If a limitation needs an upstream
+  change, write it up in a Jira ticket labelled `upstream` and escalate to the supervisor; the owner handles it with
+  the upstream author.
