@@ -289,7 +289,7 @@ feature depends on an undocumented endpoint; breaking-change checker (OpenAPI di
 
 **Scope**
 - Track A
-  - A1 OpenAPI breaking-change gate becomes blocking; schema `schemaVersion` set to 1 for all public files with migrations from every 0.x format.
+  - A1 OpenAPI breaking-change gate becomes blocking; every public file type's current `schemaVersion` (an integer per file type, counted up from 1 during 0.x) is frozen as the 1.0 baseline, with migrations from every 0.x version kept.
   - A2 Performance pass: long runs (days, 10^5 iterations of metrics), large workspaces (hundreds of runs).
   - A3 Security review of the local API, path handling and file deletion.
 - Track B
