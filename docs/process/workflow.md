@@ -57,6 +57,8 @@ developer/QA whose track it is. Blocks that need a decision (not a ticket) are o
 - Blocked: `project = TC AND labels = blocked`
 
 ## Git
+n**CI:** every PR runs `.github/workflows/ci.yml` on Windows and Linux. Run the same checks locally with
+`uv run --no-project python tools/ci/run.py all` (details: [tools/ci/README.md](../../tools/ci/README.md)).
 
 ### Branches
 - `main` — released versions only. Every commit on `main` is tagged `vX.Y.Z`.
