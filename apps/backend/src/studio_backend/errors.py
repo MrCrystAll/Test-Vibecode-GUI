@@ -15,9 +15,29 @@ from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 logger = logging.getLogger(__name__)
+
+
+class ErrorDetail(BaseModel):
+    code: str
+    message: str
+    details: Any = None
+
+
+class ErrorResponse(BaseModel):
+    """Body of every error response (documented in the OpenAPI schema)."""
+
+    error: ErrorDetail
+
+
+# Declared on every router so the contract describes errors; a `default` response also stops FastAPI
+# from documenting its own 422 shape, which is not what `_validation_exception_handler` returns.
+ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
+    "default": {"model": ErrorResponse, "description": "Error"},
+}
 
 _CODES_BY_STATUS = {
     400: "bad_request",

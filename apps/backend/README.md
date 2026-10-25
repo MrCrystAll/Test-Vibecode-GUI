@@ -43,6 +43,9 @@ Precedence: CLI > environment variable > default. Nothing is read from the worki
 - Every error response has one shape (refined to problem+json in 0.9.0):
   `{"error": {"code": "not_found", "message": "Not Found", "details": null}}`. `code` is stable and meant for
   clients; `message` is for developers and logs.
+- The OpenAPI schema is exported into `packages/contract/openapi.json` with
+  `uv run --package studio-backend export-openapi` (`--check` to verify). Commit it with every route change; see
+  `packages/contract/README.md`.
 
 ## Develop
 
