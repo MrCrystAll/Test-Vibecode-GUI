@@ -1,0 +1,66 @@
+# CI for every PR to dev/main and every push to dev (TC-26).
+# Jobs only call tools/ci/run.py so the same checks run locally; see tools/ci/README.md.
+name: CI
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: checks (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    env:
+      CI_RUN: uv run --no-project python tools/ci/run.py
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv (Python from .python-version)
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up pnpm (version from package.json packageManager)
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js (version from .nvmrc)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: $CI_RUN install
+
+      - name: Lint
+        run: $CI_RUN lint
+
+      - name: Type-check
+        run: $CI_RUN typecheck
+
+      - name: Unit tests
+        run: $CI_RUN test
+
+      - name: Build
+        run: $CI_RUN build
+
+      - name: Contract drift and import boundaries
+        run: $CI_RUN hooks
