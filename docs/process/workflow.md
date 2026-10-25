@@ -44,6 +44,11 @@ A ticket that cannot move is **not** a status. Instead:
 The PO sweeps `labels = blocked` regularly, resolves or escalates, and removes the label when unblocked.
 Developers never pick up `blocked` tickets.
 
+**Dependency unblocking:** a ticket blocked only by other tickets becomes workable once **every** blocker is merged into
+`dev` (status In Test or Done). Whoever merges a PR checks the tickets its ticket blocks; for each one whose blockers are
+now all merged, they remove the `blocked` label, comment `[ROLE] unblocked: TC-x merged in <tag>`, and message the
+developer/QA whose track it is. Blocks that need a decision (not a ticket) are only lifted by the PO.
+
 ### Useful JQL
 - Next work for devs: `project = TC AND status = "To Do" AND (labels IS EMPTY OR labels != blocked) ORDER BY rank`
 - Review queue: `project = TC AND status = "To Review"`
@@ -93,7 +98,13 @@ Keep comments factual and short. Questions for someone go in the ticket **and** 
 ## Agent-to-agent communication
 - **Jira is the source of truth**; messages are for nudges and questions. Anything decided in a message gets written
   into the ticket as a comment.
-- Agents can message each other directly (SendMessage / ListAgents by session name). Keep messages short and actionable.
+- Agents are long-lived Claude sessions named `product-owner`, `dev-a`, `dev-b`, `qa`; the supervisor is the session
+  that started them. Message each other with SendMessage (find names with ListAgents). A message wakes an idle agent,
+  so **always message the next person in the chain** at a hand-over: author → other dev (To Review), reviewer → author
+  (changes requested / merged), merger → `qa` (In Test) and any dev/QA whose ticket got unblocked, QA → author (Bug).
+- **Keep working until there is nothing you can do**: after finishing a ticket, take the next one (reviews first). End
+  your turn only when you have no unblocked work, with a short status report (what you did, what you're waiting on).
+- Keep messages short and actionable.
 - Escalation path: developer/QA → PO (product questions) → supervisor (process / cross-team) → human owner.
 - **Upstream (rlgym-learn / rlgym-learn-algos):** never open issues or PRs upstream. If a limitation needs an upstream
   change, write it up in a Jira ticket labelled `upstream` and escalate to the supervisor; the owner handles it with
