@@ -9,9 +9,12 @@ Steps: install, lint, typecheck, test, build, hooks, or `all` (every step in tha
 
 What runs is discovered, so new apps and packages plug in without editing this file:
 - uv workspace members (root pyproject.toml): ruff if `[tool.ruff]`, mypy if `[tool.mypy]`, pytest if a `tests/`
-  folder exists, `uv build` if `[build-system]`;
+  folder or `[tool.pytest.ini_options]` exists, `uv build` if `[build-system]`;
 - pnpm workspace members: their `lint`, `typecheck`, `test` and `build` package.json scripts, when present;
-- hooks: `tools/ci/hooks/<name>.py` for each name in HOOKS, when the file exists.
+- hooks: each script in HOOKS, when the file exists.
+
+Every skipped check is printed, so a missing test run is visible in the log. pytest runs with
+`--basetemp=.ci-tmp/pytest/<member>`, so CI can upload what the tests leave there (e.g. backend logs) on failure.
 
 Standard library only, so it runs before anything is installed.
 """
@@ -26,12 +29,17 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-HOOKS_DIR = Path(__file__).resolve().parent / "hooks"
+PYTEST_TMP = ROOT / ".ci-tmp" / "pytest"
 STEPS = ("install", "lint", "typecheck", "test", "build", "hooks")
-# Optional checks owned by other stories; each runs only once its script exists.
-HOOKS = (
-    "contract-drift",  # TC-18: openapi.json and the generated client match the code
-    "import-boundaries",  # TC-25: ADR-0001 / ADR-0004 import rules
+# Checks owned by other stories: (name, script relative to the repo root, arguments).
+# Each runs only once its script exists.
+HOOKS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    # TC-18: openapi.json and the generated client match the code
+    ("contract-drift", "tools/ci/hooks/contract-drift.py", ()),
+    # TC-25: ADR-0001 / ADR-0004 import rules
+    ("import-boundaries", "tools/ci/hooks/import-boundaries.py", ()),
+    # TC-42: the committed workspace fixtures match their generator
+    ("workspace-fixtures", "tests/fixtures/workspaces/generate.py", ("--check",)),
 )
 IN_GITHUB_ACTIONS = os.environ.get("GITHUB_ACTIONS") == "true"
 
@@ -79,7 +87,8 @@ def uv_members(root: Path = ROOT) -> list[UvMember]:
                     path=path,
                     has_ruff=bool(_table(data, "tool", "ruff")),
                     has_mypy=bool(_table(data, "tool", "mypy")),
-                    has_tests=(path / "tests").is_dir(),
+                    has_tests=(path / "tests").is_dir()
+                    or bool(_table(data, "tool", "pytest", "ini_options")),
                     is_buildable=bool(_table(data, "build-system")),
                 )
             )
@@ -162,9 +171,18 @@ def step_test(runner: Runner) -> None:
         "tools/ci self-test",
         [sys.executable, "-m", "unittest", "discover", "-s", "tools/ci/tests", "-t", "."],
     )
+    # pytest creates --basetemp itself but not its parents.
+    PYTEST_TMP.mkdir(parents=True, exist_ok=True)
     for member in uv_members():
         if member.has_tests:
-            runner.run(f"pytest: {member.name}", _uv_tool(member, "pytest"), member.path)
+            basetemp = PYTEST_TMP / member.name
+            runner.run(
+                f"pytest: {member.name}",
+                _uv_tool(member, "pytest", f"--basetemp={basetemp}"),
+                member.path,
+            )
+        else:
+            print(f"pytest: {member.name} has no tests/ folder or [tool.pytest.ini_options], skipped")
     runner.run("pnpm test", _pnpm_script("test"))
 
 
@@ -180,15 +198,15 @@ def step_build(runner: Runner) -> None:
 
 
 def step_hooks(runner: Runner) -> None:
-    for name in HOOKS:
-        script = HOOKS_DIR / f"{name}.py"
+    for name, relative, args in HOOKS:
+        script = ROOT / relative
         if script.is_file():
             runner.run(
                 f"hook: {name}",
-                [*uv_command(), "run", "--locked", "--all-packages", "python", str(script)],
+                [*uv_command(), "run", "--locked", "--all-packages", "python", str(script), *args],
             )
         else:
-            print(f"hook: {name} not present yet ({script.relative_to(ROOT).as_posix()}), skipped")
+            print(f"hook: {name} not present yet ({relative}), skipped")
 
 
 STEP_FUNCTIONS = {

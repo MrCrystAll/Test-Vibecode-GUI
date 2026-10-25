@@ -62,10 +62,60 @@ class UvMembersTest(unittest.TestCase):
         self.assertTrue(api.has_ruff and api.has_mypy and api.has_tests and api.is_buildable)
         self.assertFalse(lib.has_ruff or lib.has_mypy or lib.has_tests or lib.is_buildable)
 
+    def test_pytest_config_without_tests_folder_counts_as_tests(self) -> None:
+        # QA's tests/api keeps test files at the member root (TC-30); it must not be skipped.
+        _write(self.root / "pyproject.toml", '[tool.uv.workspace]\nmembers = ["suite"]\n')
+        _write(
+            self.root / "suite/pyproject.toml",
+            """
+            [project]
+            name = "suite"
+            [tool.pytest.ini_options]
+            testpaths = ["."]
+            """,
+        )
+
+        (suite,) = run.uv_members(self.root)
+
+        self.assertTrue(suite.has_tests)
+
     def test_no_workspace_means_no_members(self) -> None:
         _write(self.root / "pyproject.toml", '[project]\nname = "solo"\n')
 
         self.assertEqual(run.uv_members(self.root), [])
+
+
+class _RecordingRunner(run.Runner):
+    def __init__(self) -> None:
+        super().__init__()
+        self.titles: list[str] = []
+        self.commands: list[list[str]] = []
+
+    def run(self, title, command, cwd=run.ROOT):  # type: ignore[no-untyped-def]
+        self.titles.append(title)
+        self.commands.append(list(command))
+
+
+class StepTestTest(unittest.TestCase):
+    def test_members_without_tests_are_reported_as_skipped(self) -> None:
+        members = [
+            run.UvMember("with-tests", run.ROOT, False, False, True, False),
+            run.UvMember("no-tests", run.ROOT, False, False, False, False),
+        ]
+        runner = _RecordingRunner()
+        original = run.uv_members
+        run.uv_members = lambda root=run.ROOT: members
+        try:
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                run.step_test(runner)
+        finally:
+            run.uv_members = original
+
+        self.assertIn("pytest: with-tests", runner.titles)
+        self.assertNotIn("pytest: no-tests", runner.titles)
+        self.assertIn("pytest: no-tests has no tests/ folder", out.getvalue())
+        pytest_command = runner.commands[runner.titles.index("pytest: with-tests")]
+        self.assertIn(f"--basetemp={run.PYTEST_TMP / 'with-tests'}", pytest_command)
 
 
 class MainTest(unittest.TestCase):
@@ -83,6 +133,17 @@ class MainTest(unittest.TestCase):
 
         self.assertIn("studio-config-schema", names)
         self.assertIn("studio-rlgym-adapter", names)
+
+    def test_real_api_suite_runs_its_tests(self) -> None:
+        members = {m.name: m for m in run.uv_members()}
+
+        self.assertTrue(members["studio-api-tests"].has_tests)
+
+    def test_hook_scripts_live_in_the_repository(self) -> None:
+        for name, relative, _args in run.HOOKS:
+            with self.subTest(name):
+                self.assertFalse(Path(relative).is_absolute())
+        self.assertTrue((run.ROOT / "tests/fixtures/workspaces/generate.py").is_file())
 
 
 if __name__ == "__main__":
