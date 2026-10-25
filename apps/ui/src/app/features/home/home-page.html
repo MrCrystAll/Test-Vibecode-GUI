@@ -1,0 +1,6 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<h1 i18n="@@home.title">Welcome</h1>
+<p class="home-summary" i18n="@@home.projectCount">
+  {projectCount(), plural, =0 {You have no projects yet.} =1 {You have one project.} other {You have {{ projectCount() }} projects.}}
+</p>
+<p class="home-date" i18n="@@home.today">Today is {{ today() | date: 'fullDate' }}.</p>
