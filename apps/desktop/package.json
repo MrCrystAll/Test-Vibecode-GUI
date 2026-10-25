@@ -1,0 +1,7 @@
+{
+  "name": "@studio/desktop",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Electron shell: window, lifecycle, spawns the backend.",
+  "license": "Apache-2.0"
+}

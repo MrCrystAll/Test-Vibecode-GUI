@@ -1,0 +1,7 @@
+{
+  "name": "@studio/contract",
+  "version": "0.0.0",
+  "private": true,
+  "description": "API contract: committed openapi.json and the generated TypeScript client.",
+  "license": "Apache-2.0"
+}

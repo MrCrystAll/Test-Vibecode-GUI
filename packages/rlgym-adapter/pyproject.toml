@@ -1,0 +1,10 @@
+[project]
+name = "studio-rlgym-adapter"
+version = "0.0.0"
+description = "The only bridge to rlgym-learn: host side (used by the backend) and runner side (user's interpreter)."
+# The runner side runs inside the user's training interpreter, so it supports what rlgym-learn supports.
+requires-python = ">=3.10"
+license = "Apache-2.0"
+# rlgym-learn, rlgym-learn-algos and torch are NEVER dependencies of this package: they live in the
+# user's interpreter only (owner decision; integration notes section 7).
+dependencies = []

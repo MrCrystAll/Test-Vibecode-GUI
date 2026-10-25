@@ -1,0 +1,8 @@
+[project]
+name = "studio-backend"
+version = "0.0.0"
+description = "FastAPI service: training orchestration and file-system access for the studio."
+requires-python = ">=3.12"
+license = "Apache-2.0"
+# Owner decision: no torch, rlgym or rlgym-learn here, ever (see packages/rlgym-adapter).
+dependencies = []
