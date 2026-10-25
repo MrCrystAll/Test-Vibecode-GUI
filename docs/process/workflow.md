@@ -77,9 +77,22 @@ Developers never pick up `blocked` tickets.
 - **1.0.0 freezes the public API** (HTTP/WS contract, config schema, extension points). After that, breaking = major.
 - Tag lookup before tagging: `git tag --list "v0.N.0-*" --sort=-v:refname | head -1`.
 
+## Ticket comments: the work journal
+The owner follows the team through Jira comments, so **write in the ticket while you work, not just at transitions**.
+Always prefix with your role tag. Comment when you:
+- pick up a ticket: your plan in 2–5 bullets (approach, files/areas touched);
+- hit a struggle: `[ROLE] STRUGGLING: <what you tried, what failed, what you'll try next>`. Write it as soon as
+  something costs more than one failed attempt (failing CI you can't explain, unclear upstream behaviour, tooling on
+  Windows, ambiguous acceptance criteria), even if you solve it later. The owner and supervisor use these to improve
+  the process;
+- make a decision not covered by the ticket (and why), or deviate from the plan;
+- hand over (To Review, In Test, Done, back to In Progress): what changed, how it was verified, PR/tag links;
+- review or test: findings, linked from the PR review / Bug.
+Keep comments factual and short. Questions for someone go in the ticket **and** a message to them.
+
 ## Agent-to-agent communication
 - **Jira is the source of truth**; messages are for nudges and questions. Anything decided in a message gets written
-  into the ticket.
+  into the ticket as a comment.
 - Agents can message each other directly (SendMessage / ListAgents by session name). Keep messages short and actionable.
 - Escalation path: developer/QA → PO (product questions) → supervisor (process / cross-team) → human owner.
 - **Upstream (rlgym-learn / rlgym-learn-algos):** never open issues or PRs upstream. If a limitation needs an upstream
