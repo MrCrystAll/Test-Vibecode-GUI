@@ -34,8 +34,9 @@ The human owner has the final say on product direction; the supervisor relays.
 | In Test | Merged into `dev`; waiting for / under QA | Reviewer after merging |
 | Done | QA validated against the acceptance criteria | QA |
 
-Rejected review → back to **In Progress** (reviewer comments why). Failed QA → back to **In Progress** with a linked Bug
-or a QA comment listing the failures.
+Rejected review (Jira transition *Review failed*) and failed QA (*Validation failed*) both send the ticket back to
+**To Do**, keeping its assignee; the reviewer/QA comments why (QA also links a Bug when useful). A developer always picks
+up **their own returned tickets first**, before new work (JQL: `status = "To Do" AND assignee = currentUser() AND comment ~ "FAILED OR CHANGES REQUESTED"`).
 
 ### Blocked
 A ticket that cannot move is **not** a status. Instead:
@@ -71,9 +72,15 @@ developer/QA whose track it is. Blocks that need a decision (not a ticket) are o
 - Target `dev`. Title = conventional-commit summary + ticket key. Body: ticket link, what/why, test evidence, screenshots for UI.
 - Peer review is mandatory: DEV-A reviews DEV-B and vice-versa. Because both share one GitHub account, approval is a
   `gh pr review --comment` starting with `[DEV-x] APPROVED` plus the label `reviewed`. Change requests: `[DEV-x] CHANGES REQUESTED`.
+- The approval comment names the reviewed commit: `[DEV-x] APPROVED at <short SHA>`. **The author pushes nothing to an
+  approved PR**; a later push means a new review is needed (say so in the PR).
 - Merge = **squash merge** by the reviewer once approved and CI is green, then tag (see below) and move the ticket to In Test.
+  Always pin the approved commit so a late push can't slip in or get lost:
+  `gh pr merge <n> --squash --match-head-commit <approved full SHA>`.
   `.claude/settings.json` allows `gh pr merge` for the agents. Only run it on a PR that carries a `[DEV-x] APPROVED`
-  review from the *other* developer (or a developer, for QA PRs) and the `reviewed` label; always `--squash`.
+  review from the *other* developer (or a developer, for QA PRs) and the `reviewed` label.
+- **ADRs:** the PR sets the ADR to `Status: Accepted (YYYY-MM-DD)` before approval; merging the PR *is* the acceptance.
+  A rejected ADR is closed, not merged. Superseding happens in a new ADR.
 - Release PRs `dev → main` are opened by the supervisor after QA signs off an epic, and merged with a merge commit.
 
 ## Versioning (SemVer 2.0 with pre-releases)
