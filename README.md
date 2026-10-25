@@ -54,3 +54,7 @@ function. (os error 1)`. Prefer cloning onto an NTFS drive. As a local workaroun
 ```bash
 pnpm install --frozen-lockfile --config.node-linker=hoisted --config.hoist=false --config.package-import-method=copy
 ```
+
+## License
+Licensed under the [Apache License, Version 2.0](LICENSE). See [NOTICE](NOTICE) for attribution and
+[docs/process/licensing.md](docs/process/licensing.md) for the source-header and third-party code policy.
