@@ -72,6 +72,8 @@ developer/QA whose track it is. Blocks that need a decision (not a ticket) are o
 - Peer review is mandatory: DEV-A reviews DEV-B and vice-versa. Because both share one GitHub account, approval is a
   `gh pr review --comment` starting with `[DEV-x] APPROVED` plus the label `reviewed`. Change requests: `[DEV-x] CHANGES REQUESTED`.
 - Merge = **squash merge** by the reviewer once approved and CI is green, then tag (see below) and move the ticket to In Test.
+  `.claude/settings.json` allows `gh pr merge` for the agents. Only run it on a PR that carries a `[DEV-x] APPROVED`
+  review from the *other* developer (or a developer, for QA PRs) and the `reviewed` label; always `--squash`.
 - Release PRs `dev → main` are opened by the supervisor after QA signs off an epic, and merged with a merge commit.
 
 ## Versioning (SemVer 2.0 with pre-releases)
