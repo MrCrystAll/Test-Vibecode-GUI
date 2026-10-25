@@ -1,4 +1,4 @@
-"""Throwaway (TC-26 AC6): a deliberately failing test to show CI goes red and uploads backend logs. Never merged."""
+"""Throwaway (TC-26 AC6): a deliberate failure to show CI goes red. Never merged."""
 
 from harness.backend import BackendProcess
 
