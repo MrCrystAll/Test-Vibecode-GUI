@@ -1,0 +1,11 @@
+{
+  "name": "studio-workspace",
+  "private": true,
+  "description": "Root of the pnpm workspace (TypeScript side of the monorepo, ADR-0001).",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": ">=24 <25",
+    "pnpm": ">=12.15.0 <13"
+  }
+}

@@ -1,0 +1,31 @@
+version = 1
+revision = 5
+requires-python = ">=3.12"
+
+[manifest]
+members = [
+    "studio-backend",
+    "studio-config-schema",
+    "studio-rlgym-adapter",
+    "studio-workspace",
+]
+
+[[package]]
+name = "studio-backend"
+version = "0.0.0"
+source = { virtual = "apps/backend" }
+
+[[package]]
+name = "studio-config-schema"
+version = "0.0.0"
+source = { virtual = "packages/config-schema" }
+
+[[package]]
+name = "studio-rlgym-adapter"
+version = "0.0.0"
+source = { virtual = "packages/rlgym-adapter" }
+
+[[package]]
+name = "studio-workspace"
+version = "0.0.0"
+source = { virtual = "." }

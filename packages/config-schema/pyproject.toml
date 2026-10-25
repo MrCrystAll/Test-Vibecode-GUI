@@ -1,0 +1,7 @@
+[project]
+name = "studio-config-schema"
+version = "0.0.0"
+description = "Versioned studio file schemas (project/run envelopes), JSON Schema export and migrations."
+requires-python = ">=3.12"
+license = "Apache-2.0"
+dependencies = []
