@@ -1,6 +1,6 @@
 # Product vision
 
-Owner: `[PO]`. Status: draft for owner approval (2026-10-25).
+Owner: `[PO]`. Status: approved by the owner (2026-10-25).
 
 ## One-liner
 A local desktop studio that makes training RL agents with **rlgym-learn** visible and repeatable: configure a run
@@ -8,8 +8,8 @@ in forms instead of editing Python, launch and control it with buttons instead o
 find, compare and resume every past run from the files on your disk.
 
 ## Target users
-1. **Hobbyist / community bot makers** (primary) — train Rocket League bots with rlgym-learn on their own PC (often
-   Windows, one consumer GPU). Comfortable enough with Python to write rewards and obs builders, but tired of
+1. **Hobbyist / community bot makers** (primary) — train agents for any RLGym v2 environment with rlgym-learn on
+   their own PC (Windows or Linux, often one consumer GPU). Rocket League bots are the most common case today. Comfortable enough with Python to write rewards and obs builders, but tired of
    editing scripts for every hyper-parameter, losing track of runs, and juggling terminals and wandb.
 2. **Experienced RL practitioners / researchers** — run many experiments, multi-agent setups (self-play, several PPO
    controllers), custom agent controllers. Need reproducibility, comparison, and a GUI that never hides the raw
@@ -37,12 +37,15 @@ find, compare and resume every past run from the files on your disk.
 3. **Never hide rlgym-learn.** The studio wraps the upstream config verbatim, always offers the raw JSON next to the
    form, and runs the user's own Python code. A user can always leave the studio and run the same thing by hand.
 4. **Upstream behind one adapter.** rlgym-learn evolves fast; changes are absorbed in one package with explicit
-   supported-version ranges, not spread across the app.
-5. **The API is the product.** Everything the UI does goes through the documented HTTP/WS contract, so third parties
+   supported-version ranges, not spread across the app. The API process never imports torch; anything that needs
+   rlgym-learn or torch runs in the user's own training interpreter, through the adapter.
+5. **Environment-agnostic core.** The studio works with any RLGym v2 environment. Rocket League support lives only in
+   templates and examples.
+6. **The API is the product.** Everything the UI does goes through the documented HTTP/WS contract, so third parties
    can do the same. From 1.0.0 it is semver-stable.
-6. **Safe by default.** Never write inside upstream checkpoint folders, never load untrusted pickles silently, always
+7. **Safe by default.** Never write inside upstream checkpoint folders, never load untrusted pickles silently, always
    try to stop gracefully with a checkpoint before killing.
-7. **Boring and durable.** Explicit, modular, well-tested code; fewer features done well beats many done halfway.
+8. **Boring and durable.** Explicit, modular, well-tested code; fewer features done well beats many done halfway.
 
 ## Non-goals (permanent)
 - **Remote or distributed training** — no remote workers, clusters, cloud GPUs or job schedulers. Ever.
@@ -52,10 +55,14 @@ find, compare and resume every past run from the files on your disk.
   or vendor rlgym-learn.
 - **A general-purpose ML experiment tracker** — we track rlgym-learn runs, not arbitrary frameworks.
 - **Hosting or multi-user collaboration** — single user, single machine; sharing happens through files and git.
+- **Contributing upstream** — we never open issues or PRs on rlgym-learn / rlgym-learn-algos; the owner handles
+  upstream relations.
+- **macOS** — the supported platforms are Windows and Linux.
 
 ## Non-goals (for now, may be revisited after 1.0)
 - Visual editors for reward functions / obs builders (code stays code).
 - Embedded 3D match viewer (rlviser is launched as-is via `render`).
+- Non-English UI (strings are externalised from day one, so translations can be added later).
 - Hyper-parameter sweeps / automatic tuning.
 - Plugin marketplace.
 

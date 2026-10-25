@@ -1,6 +1,8 @@
 # Roadmap to 1.0.0
 
-Owner: `[PO]`. Status: **draft, awaiting owner approval** (2026-10-25). No Jira epics exist yet.
+Owner: `[PO]`. Status: **approved by the owner** (2026-10-25); items still awaiting a decision are marked *PENDING*.
+Jira: one epic + fix version per row below. Detailed stories exist only for the current epic (rolling detail: the
+next epic is detailed when the current one is about half done).
 Inputs: [vision.md](vision.md), [rlgym-learn-integration-notes.md](rlgym-learn-integration-notes.md), ADR-0001..0003.
 
 ## How to read this
@@ -11,6 +13,8 @@ Inputs: [vision.md](vision.md), [rlgym-learn-integration-notes.md](rlgym-learn-i
 - Default ownership by area (keeps tracks non-overlapping):
   - **Track A — backend side:** `apps/backend/`, `packages/rlgym-adapter/`, `packages/config-schema/` (Python).
   - **Track B — client side:** `apps/ui/`, `apps/desktop/`, generated client in `packages/contract/` (TypeScript).
+  - **Track shared** (CI, repo-wide tooling, licence): whoever is free. QA work is its own track.
+  - Jira labels: `track-a` (DEV-A home), `track-b` (DEV-B home), `track-shared`, `qa`.
   - The contract (OpenAPI) is the seam: every cross-track feature starts with a small contract story (endpoint +
     schema, stubbed backend) so track B can build against the generated client while track A implements it.
 - A **fake runner** (introduced in 0.4.0) emits the real event stream and file layout without torch/rlgym, so UI,
@@ -36,8 +40,9 @@ Inputs: [vision.md](vision.md), [rlgym-learn-integration-notes.md](rlgym-learn-i
 0.1 ──► 0.2 ──► 0.3 ──► 0.4 ──► 0.5 ──► 0.6 ──► 0.7 ──► 0.8 ──► 0.9 ──► 1.0
              (persistence) (interpreter) (runs)  (metrics) (editor) (history) (debug) (API freeze prep)
 ```
-Hard dependencies are listed per epic. 0.5 and 0.6 are only loosely coupled (both need 0.4); if one track runs
-dry, its next stories may be pulled forward (see open question 8).
+Hard dependencies are listed per epic. 0.5 and 0.6 are only loosely coupled (both need 0.4).
+**Lookahead rule (owner decision):** a developer may start a story of the *next* epic only if that story has no
+dependency on any unfinished story of the current epic. It is tagged under its own version.
 
 ---
 
@@ -47,13 +52,13 @@ generated client, and CI proves it on every PR.
 
 **Scope**
 - Track A
-  - A1 Monorepo skeleton: `apps/*`, `packages/*` folders, root README per package, tooling versions pinned (Node, Python, uv/pnpm).
+  - A1 Monorepo skeleton (small, first): `apps/*`, `packages/*` folders, a README per folder, pinned tool versions (Node, Python, uv/pnpm). Everything that needs these folders is blocked by it.
   - A2 FastAPI app skeleton: `/api/health` + `/api/version`, settings, structured logging, pytest + ruff + mypy/pyright.
   - A3 OpenAPI export script + `packages/contract` holding the committed `openapi.json`; CI fails if it drifts from the code.
   - A4 Backend local security: bind `127.0.0.1` on an ephemeral port, require a per-launch bearer token on HTTP and WS.
   - A5 WebSocket skeleton: one `/ws` endpoint with an envelope (`type`, `version`, `payload`) and a ping event.
 - Track B
-  - B1 Angular skeleton: standalone components, strict TS, feature-sliced folders, lint + unit tests.
+  - B1 Angular skeleton: standalone components, strict TS, feature-sliced folders, lint + unit tests; **i18n-ready from the start** (every UI string externalised; English only for 1.0).
   - B2 TS client generation from `openapi.json` (generator choice in an ADR), consumed by the UI; health screen.
   - B3 Electron shell: spawns the backend, reads port + token from its stdout handshake, waits for health, shows the UI.
   - B4 Lifecycle: graceful backend shutdown on app quit, crash detection with restart prompt, single-instance lock.
@@ -61,16 +66,19 @@ generated client, and CI proves it on every PR.
 - Shared / CI
   - C1 CI pipeline (Windows + Linux): lint, unit tests, contract drift check, build of all apps.
   - C2 Conventional-commit check and pre-release tagging helper script (`v0.N.0-alpha.K`).
+  - C3 Apache-2.0 `LICENSE` + `NOTICE` and a third-party licence check in CI.
 - QA
   - Q1 E2E harness: Playwright driving the Electron app; smoke test "app starts, health is green".
   - Q2 Backend API test harness (pytest + httpx) and test-data fixtures folder convention.
-- PO/Supervisor: ADR-0004 two-sided rlgym adapter; ADR-0005 backend packaging; ADR on client generator.
+- ADRs (written by developers, reviewed like code): ADR-0004 two-sided rlgym adapter (the backend never imports
+  torch, rlgym-learn is reached only through the adapter, introspection runs in the user's interpreter); ADR-0005
+  backend packaging (bundled Python, owner decision); ADR-0006 TS client generator.
 
 **Exit criteria:** CI green on Windows and Linux; `app starts → health green` e2e passes; changing a backend route
 without regenerating the client fails CI; backend refuses requests without the token; quitting the app leaves no
-backend process.
+backend process; Apache-2.0 licence in place.
 
-**Dependencies:** owner answers to open questions 1-3 (repo hosting/CI, platforms, backend packaging).
+**Dependencies:** none. The owner decided GitHub + GitHub Actions, Windows + Linux, and a backend bundled with its own Python.
 
 ---
 
@@ -106,13 +114,13 @@ the exact config schema of the user's training code.
 - Track A
   - A1 Adapter host side: interpreter discovery (PATH, venvs, conda), per-project interpreter setting.
   - A2 Adapter runner side (runs in the user's Python, no studio deps): `introspect` command reporting Python, rlgym, rlgym-learn, algos, torch, CUDA devices, wandb.
-  - A3 Entrypoint contract v0: a user module exposing `build(ctx) -> (env_create_function, agent_controller)`; documented and validated (importable, spawn-safe).
+  - A3 Entrypoint contract v0: a user module exposing `build(ctx) -> (env_create_function, agent_controller)`; documented and validated (importable, spawn-safe). *PENDING owner confirmation; 0.3.0 stories are not detailed until then.*
   - A4 Config-schema introspection: the runner instantiates the user's components and emits the concrete JSON Schema + defaults of `LearningCoordinatorConfigModel`.
   - A5 Supported-version matrix (rlgym-learn 2.0.x, algos 0.4.x initially) with clear "unsupported version" errors.
 - Track B
   - B1 Interpreter picker + environment status panel (versions, GPU list, problems with fix hints).
   - B2 Entrypoint picker and "check entrypoint" action with readable error display.
-  - B3 Project template gallery: create a project from the upstream quick-start (Rocket League PPO) template.
+  - B3 Project template gallery: create a project from a template. Rocket League PPO (the upstream quick-start) is the first template; the core stays generic RLGym, with nothing Rocket League-specific outside templates.
 - QA: tests with a fake interpreter fixture (no torch) and one real-environment manual test plan; e2e "create from template, check env".
 
 **Exit criteria:** with a valid environment, "check" shows versions and devices and fetches a schema; with a broken one
@@ -154,7 +162,8 @@ process is shown as `crashed` with the traceback.
 
 **Scope**
 - Track A
-  - A1 Studio metrics logger (runner side): wraps the user's `DictMetricsLogger` (and/or wandb logger), appends `metrics.jsonl` per iteration per controller.
+  - A1 Studio metrics logger (runner side): wraps the user's `DictMetricsLogger`, appends `metrics.jsonl` per iteration per controller.
+  - A1b External tracking integration: *PENDING owner decision* (wandb pass-through, MLflow, or both). Left open.
   - A2 `metrics.jsonl` format v1 (documented, versioned) + backend tailing and WS streaming with resume-from-offset.
   - A3 Metrics query API: series list, downsampled ranges, latest values, per controller.
   - A4 Health signals: steps/s, time since last iteration/heartbeat, env process count, stall detection.
@@ -166,7 +175,7 @@ process is shown as `crashed` with the traceback.
 - QA: fake runner emits deterministic metrics; e2e asserts charts update live and after app restart.
 
 **Exit criteria:** metrics appear within one iteration of being produced, survive backend/app restarts, custom env
-metrics are rendered without code changes, and wandb still works when enabled.
+metrics are rendered without code changes, and the external tracker(s) chosen by the owner (PENDING) still work when enabled.
 
 **Dependencies:** 0.4.0.
 
@@ -275,7 +284,7 @@ feature depends on an undocumented endpoint; breaking-change checker (OpenAPI di
   - A2 Performance pass: long runs (days, 10^5 iterations of metrics), large workspaces (hundreds of runs).
   - A3 Security review of the local API, path handling and file deletion.
 - Track B
-  - B1 Installers for supported platforms (signed if possible), update notification (no silent auto-update).
+  - B1 Installers for Windows and Linux (signed if possible); update notification, no silent auto-update, no telemetry (*PENDING owner confirmation*).
   - B2 Onboarding: first-run tour, template-based quick start, in-app links to docs.
   - B3 Accessibility and keyboard navigation pass; UI polish backlog.
 - Docs: user guide, entrypoint authoring guide, API/extension guide, upgrade notes from 0.x.
@@ -299,21 +308,28 @@ points are documented and covered by contract tests; QA sign-off; release tagged
 - Installing or managing Python, torch or CUDA for the user.
 - Algorithms other than what the user's entrypoint provides (we ship PPO templates only).
 - Multi-user, sharing service, accounts, telemetry.
-- macOS support (unless the owner decides otherwise, see question 2).
+- macOS support (owner decision).
+- Non-English UI (strings are externalised from 0.1.0, so translations can come later).
+- Contributing upstream: we never open issues or PRs on rlgym-learn / rlgym-learn-algos. Upstream needs become Jira
+  tickets labelled `upstream`, escalated to the supervisor.
 - Support for rlgym-learn 1.x.
 
 ---
 
-## Open questions for the human owner
-1. **Repository hosting and CI:** GitHub (which org/repo name) with GitHub Actions? CI from 0.1.0 needs this; there is no remote yet.
-2. **Platforms for 1.0:** Windows + Linux (what rlgym-learn supports)? Is macOS wanted at all?
-3. **Backend distribution:** ship the FastAPI backend bundled with its own Python (PyInstaller/embedded, recommended) separate from the user's training interpreter, or require users to install the backend into their own Python?
-4. **Entrypoint contract:** OK that users write a small `build()` entrypoint module (we provide templates) rather than the studio trying to run arbitrary existing scripts?
-5. **Supported upstream versions:** target only rlgym-learn 2.0.x / rlgym-learn-algos 0.4.x at first, and add newer versions as stories?
-6. **Scope of domain:** generic RLGym core with Rocket League as the template/first-class example, or Rocket League-only?
-7. **wandb:** keep it as an optional pass-through (configured, not reimplemented), with our local metrics as the primary view?
-8. **Lookahead between epics:** may a developer start stories of the next epic (tagged under that version) when the current epic has no unblocked work for them, or must epics be strictly sequential?
-9. **License** of the project (affects third-party ecosystem at 1.0): MIT/Apache-2.0, or proprietary?
-10. **Upstream contributions:** may we propose PRs to rlgym-learn (e.g. a non-keyboard control hook, a metrics callback) to reduce what our adapter overrides?
-11. **Updates and telemetry:** confirm "update notification only, no telemetry" for 1.0.
-12. **UI language:** English only for 1.0?
+## Owner decisions (2026-10-25)
+1. Hosting and CI: GitHub (`MrCrystAll/Test-Vibecode-GUI`, private) with GitHub Actions.
+2. Platforms for 1.0: Windows and Linux. No macOS.
+3. The backend ships bundled with its own Python, separate from the training interpreter. **The API process never
+   imports torch; rlgym-learn is reached only through the adapter package.** Introspection runs in the user's
+   interpreter, so studio and training environment cannot disagree on versions.
+5. Supported upstream: rlgym-learn 2.0.x and rlgym-learn-algos 0.4.x first; newer versions come as stories.
+6. Generic RLGym core. Rocket League is only the first template (the owner has other environments ready).
+8. Lookahead into the next epic is allowed only for stories with no dependency on the current epic.
+9. Licence: Apache-2.0.
+10. No upstream issues or PRs. Upstream needs become Jira tickets labelled `upstream`, escalated to the supervisor.
+12. English only for 1.0; the UI is i18n-ready from 0.1.0 (strings externalised).
+
+## Still open (PENDING)
+4. Entrypoint contract (`build()` module plus templates): the supervisor is explaining it to the owner. Blocks detailing 0.3.0.
+7. External tracking: wandb, MLflow, or both. Blocks the 0.5.0 tracking-integration stories.
+11. Update notification only and no telemetry for 1.0. Affects 1.0.0 only.
