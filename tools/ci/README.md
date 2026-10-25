@@ -51,6 +51,7 @@ PowerShell: `$env:pnpm_config_node_linker='hoisted'; $env:pnpm_config_hoist='fal
 ## CI details
 - Triggers: pull requests to `dev` and `main`, pushes to `dev`. Matrix: `ubuntu-latest` and `windows-latest`,
   `fail-fast: false` so both results are always visible. Job timeout: 15 minutes.
+- After `install`, every step runs even when an earlier one failed, so one push reports every failing check.
 - Toolchain: uv via `astral-sh/setup-uv` (Python from `.python-version`, cache keyed on `uv.lock`), pnpm via
   `pnpm/action-setup` (version from `packageManager`), Node via `actions/setup-node` (version from `.nvmrc`, pnpm
   store cache).

@@ -48,21 +48,28 @@ jobs:
           cache: pnpm
 
       - name: Install
+        id: install
         run: $CI_RUN install
 
+      # Once installed, every check runs even if an earlier one failed, so one push shows all failures.
       - name: Lint
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: $CI_RUN lint
 
       - name: Type-check
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: $CI_RUN typecheck
 
       - name: Unit tests
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: $CI_RUN test
 
       - name: Build
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: $CI_RUN build
 
       - name: Contract drift and import boundaries
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: $CI_RUN hooks
 
       # Backend logs written by the API suite (tests/api) and anything else pytest left in its temp dirs.
