@@ -64,3 +64,13 @@ jobs:
 
       - name: Contract drift and import boundaries
         run: $CI_RUN hooks
+
+      # Backend logs written by the API suite (tests/api) and anything else pytest left in its temp dirs.
+      - name: Upload test logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-${{ matrix.os }}
+          path: .ci-tmp/pytest/**/*.log
+          if-no-files-found: ignore
+          retention-days: 14
