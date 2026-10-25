@@ -1,0 +1,11 @@
+{
+  "archived": false,
+  "createdAt": "2026-01-01T01:42:00Z",
+  "description": "Description of project 246.",
+  "id": "project-246",
+  "kind": "project",
+  "name": "Project 246",
+  "schemaVersion": 1,
+  "updatedAt": "2026-01-01T02:42:00Z",
+  "upstream": null
+}

@@ -1,0 +1,14 @@
+{
+  "archived": false,
+  "createdAt": "2026-01-01T00:00:00Z",
+  "description": "Original description.",
+  "id": "edit-me",
+  "kind": "project",
+  "name": "Edit me",
+  "newField": {
+    "x": 1
+  },
+  "schemaVersion": 999,
+  "updatedAt": "2026-01-01T01:00:00Z",
+  "upstream": null
+}

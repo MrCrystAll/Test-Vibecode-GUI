@@ -1,0 +1,2 @@
+# Byte-exact fixtures: keep the CRLF and BOM a Windows editor would write.
+edits/project-json/crlf-bom.json -text
