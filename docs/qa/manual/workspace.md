@@ -33,9 +33,9 @@ Covers X2-1, T-36-3, T-36-4, T-41-2, T-41-4. `<ws>` = copy of `external-edit`; p
    unchanged. Nothing is created in `<ws>/edit-me/.backup/`.
 5. *Newer studio:* quit, copy `too-new.json` over it, start. Expected: as in step 4, but the message says the file
    was written by a newer version of the studio (`file_too_new`). The file is unchanged.
-6. *Notepad style (Windows, and Linux with the same file):* quit, copy `crlf-bom.json` over it, start. Record what
-   happens (accepted or `file_invalid`) and check it matches the answer to test-plan Q5. If the app accepts it and
-   you then rename the project, the file must come back as LF without a BOM.
+6. *Notepad style (Windows, and Linux with the same file):* quit, copy `crlf-bom.json` over it, start. Expected
+   (Q5): accepted like `renamed.json`, no error, file unchanged. Then rename the project from the app: the file
+   comes back as UTF-8 without a BOM, with LF line endings.
 
 **B. While the app is open** (from TC-37/TC-41)
 
