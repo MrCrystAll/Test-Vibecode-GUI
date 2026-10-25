@@ -21,6 +21,7 @@ uv run --no-project python tests/fixtures/workspaces/generate.py --check
 | `workspaces/many-projects/` | 250 valid projects `project-001..250`: every 10th archived, every 7th has a non-ASCII name, every 11th a 100-char name, every 3rd a description, every 50th an unknown key `userNote`; `updatedAt` order differs from id order | project v1 | `generate.py` | X2-3, T-37-2, T-39-1, M-CACHE |
 | `workspaces/broken/` | `valid-project` next to `invalid-json`, `missing-name`, `wrong-type`, `too-new` (schemaVersion 999), `empty-file`, `not-an-object` | project v1 (+ v999) | `generate.py` | X2-4, T-32-5, T-36-3, T-39-3 |
 | `workspaces/external-edit/` | `edit-me` + `bystander`: start state for hand edits | project v1 | `generate.py` | T-36-4, T-37-3, M-ED |
+| `workspaces/odd-folders/` | `valid-project` next to `My Proj/` (invalid folder name), `no-project-file/`, `.hidden-project/` (dot-folder) and `id-mismatch/` (`id` ≠ folder): listing rules from TC-42 Q3 | project v1 | `generate.py` | T-36-9 |
 | `workspaces/not-a-workspace/` | Non-empty folder without `.studio/` (opening it must give `workspace_not_empty` and write nothing) | — | `generate.py` | T-34-4, T-38-3 |
 | `edits/project-json/` | Replacement files for `external-edit/edit-me/project.json`: `renamed`, `extra-key`, `too-new`, `invalid-json`, `crlf-bom` (UTF-8 BOM + CRLF, kept byte-exact by `.gitattributes`) | project v1 | `generate.py` | T-32-2, T-36-4, M-ED |
 

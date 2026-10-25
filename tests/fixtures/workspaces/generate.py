@@ -29,7 +29,15 @@ WORKSPACE_SCHEMA_VERSION = 1
 TOO_NEW_SCHEMA_VERSION = 999
 
 # Every generated workspace; generate() owns these folders and edits/project-json/, nothing else.
-WORKSPACES = ("empty", "one-project", "many-projects", "broken", "external-edit", "not-a-workspace")
+WORKSPACES = (
+    "empty",
+    "one-project",
+    "many-projects",
+    "broken",
+    "external-edit",
+    "odd-folders",
+    "not-a-workspace",
+)
 MANY_PROJECTS_COUNT = 250
 
 BASE_TIME = datetime(2026, 1, 1, tzinfo=timezone.utc)
@@ -150,6 +158,20 @@ def build_external_edit(root: Path) -> None:
     add_project(root, project("bystander", "Bystander"))
 
 
+def build_odd_folders(root: Path) -> None:
+    """Folders that are not plain projects; listing rules decided by the PO in TC-42 (Q3)."""
+    init_workspace(root)
+    add_project(root, project("valid-project", "Valid project"))
+    # Invalid folder name (uppercase + space): listed read-only with invalid_project_id.
+    write_json(root / "My Proj" / "project.json", project("My Proj", "Hand-made folder"))
+    # No project.json: ignored.
+    write_text(root / "no-project-file" / "notes.txt", "Not a project.\n")
+    # Dot-folder: ignored, even with a project.json inside.
+    write_json(root / ".hidden-project" / "project.json", project("hidden-project", "Hidden"))
+    # id field differs from the folder: the folder name wins, file_invalid with pointer /id.
+    write_json(root / "id-mismatch" / "project.json", project("other-id", "Id mismatch"))
+
+
 def build_not_a_workspace(root: Path) -> None:
     """A non-empty folder without .studio/workspace.json: opening it must fail with workspace_not_empty (TC-34 AC3)."""
     write_text(root / "notes.txt", "Someone's documents. The studio must not write here.\n")
@@ -173,6 +195,7 @@ BUILDERS = {
     "many-projects": build_many_projects,
     "broken": build_broken,
     "external-edit": build_external_edit,
+    "odd-folders": build_odd_folders,
     "not-a-workspace": build_not_a_workspace,
 }
 
