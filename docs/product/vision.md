@@ -31,7 +31,8 @@ find, compare and resume every past run from the files on your disk.
 
 ## Product principles
 1. **Local first, local only.** Training runs as child processes on the user's machine, forever (ADR-0003). The app
-   is fully usable offline; cloud services (wandb) are optional integrations, never requirements.
+   is fully usable offline. Local metrics are the source of truth; external trackers (MLflow, wandb) are optional
+   metrics sinks, never requirements. Auto-update can be turned off and the app sends no telemetry.
 2. **Files are the truth.** Projects, configs and run metadata are human-readable files with a `schemaVersion` and
    migrations (ADR-0002). Users can diff, commit and share them. Anything else (indexes, caches) is rebuildable.
 3. **Never hide rlgym-learn.** The studio wraps the upstream config verbatim, always offers the raw JSON next to the
@@ -51,6 +52,9 @@ find, compare and resume every past run from the files on your disk.
 - **Remote or distributed training** — no remote workers, clusters, cloud GPUs or job schedulers. Ever.
 - **A database as source of truth** — persistence is the file system unless an ADR supersedes ADR-0002.
 - **Replacing rlgym-learn** — we do not reimplement PPO, env processes or the RLGym API.
+- **Running arbitrary training scripts** — a run is always defined through the `build()` entrypoint contract (with
+  templates), so the studio can inject config and control the run.
+- **Telemetry** — no usage data leaves the machine; the only outgoing call is the optional update check.
 - **Managing the user's Python environment** — we detect and validate an interpreter; we do not install torch/CUDA
   or vendor rlgym-learn.
 - **A general-purpose ML experiment tracker** — we track rlgym-learn runs, not arbitrary frameworks.

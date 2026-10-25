@@ -284,7 +284,11 @@ heartbeat (timesteps collected, n_procs, paused) from the overridden `process_kb
 - **Entrypoint contract**: a Python module exposing e.g. `build(ctx) -> (env_create_function, agent_controller)`
   (names TBD), where `ctx` gives the resolved config and run paths.
 - **Metrics**: any `DictMetricsLogger` works; we document the `metrics.jsonl` format so third-party tools can read it.
+- **Metrics sinks** (owner decision, 0.5.0): a runner-side interface fed with each record after it is written to
+  `metrics.jsonl`; MLflow and wandb are the two built-in optional sinks. A sink failure must never stop training.
+  For wandb this supersedes wiring `WandbMetricsLogger` (§2.8) by hand in the entrypoint.
 - **Run event stream** (runner → backend): documented JSON events (started, heartbeat, iteration, checkpoint, paused,
   stopped, crashed, log line).
 - **Control commands** (backend → runner): pause, resume, checkpoint, stop, add/remove process, set min-frac.
-- **Templates**: starter entrypoints (e.g. the upstream quick-start Rocket League PPO setup) users can copy.
+- **Templates**: starter entrypoints users can copy: the upstream quick-start Rocket League PPO setup and one generic
+  non-Rocket-League RLGym template (owner decision).

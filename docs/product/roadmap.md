@@ -1,6 +1,6 @@
 # Roadmap to 1.0.0
 
-Owner: `[PO]`. Status: **approved by the owner** (2026-10-25); items still awaiting a decision are marked *PENDING*.
+Owner: `[PO]`. Status: **approved by the owner** (2026-10-25); all owner questions answered. One open risk remains (see the end of this file).
 Jira: one epic + fix version per row below. Detailed stories exist only for the current epic (rolling detail: the
 next epic is detailed when the current one is about half done).
 Inputs: [vision.md](vision.md), [rlgym-learn-integration-notes.md](rlgym-learn-integration-notes.md), ADR-0001..0003.
@@ -29,12 +29,12 @@ Inputs: [vision.md](vision.md), [rlgym-learn-integration-notes.md](rlgym-learn-i
 | 0.2.0 | Workspace & persistence | Projects stored as versioned files in a user workspace, with migrations and a rebuildable index. |
 | 0.3.0 | Python environment & entrypoint | Pick and validate the user's training interpreter; define the entrypoint contract; introspect config schema. |
 | 0.4.0 | Run lifecycle | Launch, pause, checkpoint, stop and kill training runs as local child processes, with live logs. |
-| 0.5.0 | Live monitoring | Per-iteration metrics written to disk and streamed live; charts and run health. |
+| 0.5.0 | Live monitoring | Per-iteration metrics written to disk and streamed live; charts and run health; metrics sink extension point (MLflow, wandb). |
 | 0.6.0 | Config editor | Schema-driven forms over the upstream config, with raw JSON, validation, presets and multi-controller support. |
 | 0.7.0 | Checkpoints & run history | Browse, resume, fork, compare and clean up runs and checkpoints. |
 | 0.8.0 | Debugging & diagnostics | Actionable errors for crashes, env-process failures, interpreter/CUDA problems; log search; render toggle. |
 | 0.9.0 | Public API & extension points | Versioned, documented HTTP/WS API, config schema and extension points ready to freeze. |
-| 1.0.0 | Stable release | Installers, docs, upgrade path, betas; freeze the public API under semver. |
+| 1.0.0 | Stable release | Signed installers, auto-update, release pipeline, docs, upgrade path, betas; freeze the public API under semver. |
 
 ```
 0.1 ──► 0.2 ──► 0.3 ──► 0.4 ──► 0.5 ──► 0.6 ──► 0.7 ──► 0.8 ──► 0.9 ──► 1.0
@@ -114,13 +114,13 @@ the exact config schema of the user's training code.
 - Track A
   - A1 Adapter host side: interpreter discovery (PATH, venvs, conda), per-project interpreter setting.
   - A2 Adapter runner side (runs in the user's Python, no studio deps): `introspect` command reporting Python, rlgym, rlgym-learn, algos, torch, CUDA devices, wandb.
-  - A3 Entrypoint contract v0: a user module exposing `build(ctx) -> (env_create_function, agent_controller)`; documented and validated (importable, spawn-safe). *PENDING owner confirmation; 0.3.0 stories are not detailed until then.*
+  - A3 Entrypoint contract v0: a user module exposing `build(ctx) -> (env_create_function, agent_controller)`; documented and validated (importable, spawn-safe). Owner-approved; this is the **only** way to define a run — there is no "run an arbitrary script" mode.
   - A4 Config-schema introspection: the runner instantiates the user's components and emits the concrete JSON Schema + defaults of `LearningCoordinatorConfigModel`.
   - A5 Supported-version matrix (rlgym-learn 2.0.x, algos 0.4.x initially) with clear "unsupported version" errors.
 - Track B
   - B1 Interpreter picker + environment status panel (versions, GPU list, problems with fix hints).
   - B2 Entrypoint picker and "check entrypoint" action with readable error display.
-  - B3 Project template gallery: create a project from a template. Rocket League PPO (the upstream quick-start) is the first template; the core stays generic RLGym, with nothing Rocket League-specific outside templates.
+  - B3 Project template gallery: create a project from a template. Two templates at first: Rocket League PPO (the upstream quick-start) and one generic non-Rocket-League RLGym template. The core stays generic RLGym, with nothing Rocket League-specific outside templates.
 - QA: tests with a fake interpreter fixture (no torch) and one real-environment manual test plan; e2e "create from template, check env".
 
 **Exit criteria:** with a valid environment, "check" shows versions and devices and fetches a schema; with a broken one
@@ -163,19 +163,28 @@ process is shown as `crashed` with the traceback.
 **Scope**
 - Track A
   - A1 Studio metrics logger (runner side): wraps the user's `DictMetricsLogger`, appends `metrics.jsonl` per iteration per controller.
-  - A1b External tracking integration: *PENDING owner decision* (wandb pass-through, MLflow, or both). Left open.
   - A2 `metrics.jsonl` format v1 (documented, versioned) + backend tailing and WS streaming with resume-from-offset.
   - A3 Metrics query API: series list, downsampled ranges, latest values, per controller.
   - A4 Health signals: steps/s, time since last iteration/heartbeat, env process count, stall detection.
+  - A5 **Metrics sink extension point** (owner decision): a documented interface that receives every metrics record
+    after it has been written to `metrics.jsonl`. Local metrics stay the source of truth: a failing or slow sink never
+    blocks training or local metrics. Sinks run on the adapter's runner side, in the user's interpreter, so their
+    libraries are user dependencies and never backend dependencies. The design goes in an ADR first.
+  - A6 MLflow sink (optional): local tracking URI by default (inside the workspace); configurable URI and experiment.
+  - A7 wandb sink (optional): replaces wiring rlgym-learn-algos' `WandbMetricsLogger` by hand; resumes the wandb run on resume.
+  - If 0.5.0 gets too big, A6/A7 move to a follow-up story in the next epic (allowed by the lookahead rule, as they only depend on A5).
 - Track B
   - B1 Charting component (library chosen in an ADR) with time/timestep x-axis, smoothing, zoom.
   - B2 Run dashboard: default PPO panels (reward, entropy, KL, critic loss, clip fraction, SPS) + any custom nested metrics.
   - B3 Health strip: status, SPS, timesteps vs limit, ETA, last checkpoint.
   - B4 Multi-controller views (one tab/series per subcontroller).
-- QA: fake runner emits deterministic metrics; e2e asserts charts update live and after app restart.
+  - B5 Per-project sink settings (enable MLflow / wandb, URI, project), with secrets kept out of project files.
+- QA: fake runner emits deterministic metrics; e2e asserts charts update live and after app restart; a fake sink
+  verifies the interface, including a sink that raises errors.
 
 **Exit criteria:** metrics appear within one iteration of being produced, survive backend/app restarts, custom env
-metrics are rendered without code changes, and the external tracker(s) chosen by the owner (PENDING) still work when enabled.
+metrics are rendered without code changes; with the MLflow sink enabled a run is visible in a local MLflow UI, and a
+broken sink never stops training or local metrics.
 
 **Dependencies:** 0.4.0.
 
@@ -246,7 +255,7 @@ at least 5 runs; the studio never writes inside upstream checkpoint folders.
 - QA: fault-injection fixtures in the fake runner for every classified error; exploratory session on Windows.
 
 **Exit criteria:** each classified failure shows a specific message and hint in e2e; a diagnostics bundle is
-reproducible and contains no secrets (wandb keys) or checkpoints.
+reproducible and contains no secrets (tracker API keys) or checkpoints.
 
 **Dependencies:** 0.4.0, 0.5.0.
 
@@ -259,7 +268,7 @@ reproducible and contains no secrets (wandb keys) or checkpoints.
 - Track A
   - A1 API review and cleanup: consistent resources, error model (problem+json), pagination, `/api/v1` prefix.
   - A2 WS event catalogue with JSON Schemas and versioned envelopes; contract tests for every event.
-  - A3 Freeze candidates: project/run file schemas, `metrics.jsonl` v1, entrypoint contract v1, control commands; deprecation policy.
+  - A3 Freeze candidates: project/run file schemas, `metrics.jsonl` v1, entrypoint contract v1, **metrics sink interface**, control commands; deprecation policy.
   - A4 Local API access for third parties: discoverable endpoint + token file in the workspace, documented security model.
   - A5 Extension point: custom metric panels / run-event consumers via the public API only (no in-process plugins).
 - Track B
@@ -284,16 +293,25 @@ feature depends on an undocumented endpoint; breaking-change checker (OpenAPI di
   - A2 Performance pass: long runs (days, 10^5 iterations of metrics), large workspaces (hundreds of runs).
   - A3 Security review of the local API, path handling and file deletion.
 - Track B
-  - B1 Installers for Windows and Linux (signed if possible); update notification, no silent auto-update, no telemetry (*PENDING owner confirmation*).
+  - B1 Installers for Windows and Linux (electron-builder).
   - B2 Onboarding: first-run tour, template-based quick start, in-app links to docs.
   - B3 Accessibility and keyboard navigation pass; UI polish backlog.
+  - B4 **Built-in auto-update** with electron-updater (owner decision). Zero telemetry; the update check can be
+    disabled in settings; the user sees what will be installed, and an update never interrupts a running training.
+- Shared
+  - S1 Release pipeline: on a `vX.Y.Z` tag, CI builds the installers and publishes them with the update metadata
+    (`latest.yml` / `latest-linux.yml`) to GitHub Releases. Pre-releases go to a separate channel.
+  - S2 Code signing: Windows Authenticode signing (certificate choice and cost decided by the owner) and Linux
+    package/AppImage signatures; secrets stored only in CI.
 - Docs: user guide, entrypoint authoring guide, API/extension guide, upgrade notes from 0.x.
 - QA: full regression on Windows and Linux; beta programme (`v1.0.0-beta.N`); sign-off checklist.
 
-**Exit criteria:** installers work on clean machines; all 0.x workspaces migrate; public API, config schema and extension
-points are documented and covered by contract tests; QA sign-off; release tagged `v1.0.0`.
+**Exit criteria:** signed installers work on clean machines; a 1.0.0-beta install updates itself to a newer build
+through the release pipeline, and doesn't when the check is disabled; all 0.x workspaces migrate; public API, config
+schema and extension points (including the metrics sink) are documented and covered by contract tests; QA sign-off;
+release tagged `v1.0.0`.
 
-**Dependencies:** 0.9.0.
+**Dependencies:** 0.9.0; resolution of risk R1 (below) before S1/B4 can ship.
 
 ---
 
@@ -307,7 +325,9 @@ points are documented and covered by contract tests; QA sign-off; release tagged
 - In-process plugins loaded into the backend or UI (extension is via the public API and the entrypoint contract).
 - Installing or managing Python, torch or CUDA for the user.
 - Algorithms other than what the user's entrypoint provides (we ship PPO templates only).
-- Multi-user, sharing service, accounts, telemetry.
+- Multi-user, sharing service, accounts, telemetry (auto-update checks send no usage data).
+- Running arbitrary training scripts: a run is always defined through the entrypoint contract.
+- Metrics sinks other than MLflow and wandb shipped in the box (third parties can add their own via the sink interface).
 - macOS support (owner decision).
 - Non-English UI (strings are externalised from 0.1.0, so translations can come later).
 - Contributing upstream: we never open issues or PRs on rlgym-learn / rlgym-learn-algos. Upstream needs become Jira
@@ -322,14 +342,21 @@ points are documented and covered by contract tests; QA sign-off; release tagged
 3. The backend ships bundled with its own Python, separate from the training interpreter. **The API process never
    imports torch; rlgym-learn is reached only through the adapter package.** Introspection runs in the user's
    interpreter, so studio and training environment cannot disagree on versions.
+4. Entrypoint contract approved: a `build()` entrypoint module, with templates (Rocket League + one generic non-RL
+   template). No "run an arbitrary script" mode.
 5. Supported upstream: rlgym-learn 2.0.x and rlgym-learn-algos 0.4.x first; newer versions come as stories.
 6. Generic RLGym core. Rocket League is only the first template (the owner has other environments ready).
+7. Local metrics are the source of truth. A generic metrics sink extension point with two optional implementations,
+   MLflow (local tracking URI by default) and wandb, planned in 0.5.0. The sink interface is frozen at 1.0.
 8. Lookahead into the next epic is allowed only for stories with no dependency on the current epic.
 9. Licence: Apache-2.0.
 10. No upstream issues or PRs. Upstream needs become Jira tickets labelled `upstream`, escalated to the supervisor.
+11. Built-in auto-update via electron-updater, zero telemetry, update check can be disabled in settings. Release
+    pipeline to GitHub Releases and code signing are 1.0.0 work.
 12. English only for 1.0; the UI is i18n-ready from 0.1.0 (strings externalised).
 
-## Still open (PENDING)
-4. Entrypoint contract (`build()` module plus templates): the supervisor is explaining it to the owner. Blocks detailing 0.3.0.
-7. External tracking: wandb, MLflow, or both. Blocks the 0.5.0 tracking-integration stories.
-11. Update notification only and no telemetry for 1.0. Affects 1.0.0 only.
+## Open risks
+- **R1 — auto-update from a private repository (1.0.0).** The repository is private, and electron-updater cannot read
+  private GitHub Releases without embedding a token in the app, which would leak repository access to every user.
+  Options to decide before 1.0.0: make releases public (public repo, or a separate public releases repo), or host the
+  update feed elsewhere (generic HTTPS server / S3). Raised with the owner by the supervisor; blocks 1.0.0 S1/B4.
