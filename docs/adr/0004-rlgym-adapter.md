@@ -1,6 +1,6 @@
 # ADR-0004: Two-sided rlgym adapter (host side and runner side)
 
-- Status: Proposed (2026-10-25)
+- Status: Accepted (2026-10-25)
 - Ticket: TC-12
 
 ## Context

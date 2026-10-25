@@ -1,6 +1,6 @@
 # ADR-0005: Backend packaged with a bundled Python runtime
 
-- Status: Proposed (2026-10-25)
+- Status: Accepted (2026-10-25)
 - Ticket: TC-14
 
 ## Context
@@ -38,6 +38,7 @@ and packaged builds. `uv` itself installs Python from these same builds, so deve
   python/                 # python-build-standalone install_only_stripped, pinned version + SHA-256
     python.exe | bin/python3
     Lib/site-packages/ | lib/python3.X/site-packages/   # backend + adapter host side + locked deps
+  runner/                 # studio_rlgym_adapter source tree only, put on the USER's PYTHONPATH (ADR-0004)
   BUNDLE.json             # python version, backend version, lockfile hash (for diagnostics)
 ```
 Build steps (CI, per OS, implemented in 0.8.0):
@@ -48,7 +49,9 @@ Build steps (CI, per OS, implemented in 0.8.0):
 3. Remove unused stdlib parts, precompile with `python -m compileall` (the install dir is read-only at runtime).
 4. **Guard:** the build fails if `torch`, `rlgym`, `rlgym_learn` or `rlgym_learn_algos` is found in the bundle.
    Together with the import-boundary lint (TC-25) this enforces "no torch in the API process".
-5. electron-builder copies `backend/` as `extraResources`.
+5. Copy the adapter's `src/studio_rlgym_adapter/` tree (and nothing from `site-packages`) to `backend/runner/`; the
+   host prepends it to the user's interpreter `PYTHONPATH` when launching runner commands (ADR-0004 §1).
+6. electron-builder copies `backend/` as `extraResources`.
 
 ### How Electron spawns the backend
 Electron's main process has one `BackendLauncher` interface with two implementations, picked by `app.isPackaged`.
