@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Proves the i18n lint rule (eslint.config.js) rejects hard-coded user-visible template text.
-// Run with `node --test tools/` (part of `pnpm lint`).
+// Run with `node --test tools/i18n-lint.test.cjs` (part of `pnpm lint`).
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
