@@ -17,3 +17,4 @@ You validate what's merged into `dev`. You may write test code (unit gaps, e2e s
 ## Ownership
 - The e2e harness, test fixtures (e.g. a fake rlgym-learn run producing metrics/checkpoints) and test reports.
 - Flag flaky tests as Bugs; never silently disable a test.
+- How tests are organised, the fake-runner requirements, flaky-test policy and beta regressions: [test-strategy.md](../test-strategy.md). Per-epic plans and beta reports: [docs/qa/](../../qa/).
