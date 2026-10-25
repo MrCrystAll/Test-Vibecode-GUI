@@ -57,7 +57,8 @@ tests/                              # QA-owned, black-box; imports nothing from 
   api/                              # pytest + httpx suite against a spawned backend (TC-30)
   e2e/                              # Playwright-Electron suite (TC-29)
   fixtures/                         # shared test data (§5)
-  support/                          # small helpers shared by api/ and e2e/ (process spawning, temp dirs)
+                                    # helpers live in each suite (api/harness/, e2e/support/): Python and
+                                    # TypeScript cannot share code; they follow the same conventions
 docs/qa/                            # test plans, manual test cases, beta reports
   <version>-test-plan.md
   manual/<area>.md                  # longer manual procedures referenced from a plan
@@ -67,8 +68,9 @@ docs/qa/                            # test plans, manual test cases, beta report
 
 `tests/` is its own workspace member (uv for `tests/api`, pnpm for `tests/e2e`) so its dependencies (Playwright,
 httpx, websockets) never leak into an app. The one exception to "imports nothing": e2e and API tests may read the
-committed contract artefacts in `packages/contract/` (e.g. to validate WS messages against `events/*.schema.json`),
-because those are the public contract, not code.
+committed contract artefacts in `packages/contract/` (e.g. to validate WS messages against `events/*.schema.json`)
+and the migration corpus in `packages/config-schema/tests/fixtures/` (old-version files, §5.6), because those are
+the public contract and data, not code.
 
 ## 4. Naming and traceability
 
@@ -98,7 +100,7 @@ tests/fixtures/
   handshake/                        # sample backend stdout lines (valid, malformed, partial, extra noise)
   contract/                         # sample WS messages, valid and invalid, per event type
   workspaces/<name>/                # (0.2.0+) complete workspace folders, e.g. empty/, one-project/, many-runs/
-  migrations/<file-type>/v<N>/      # (0.2.0+) one file per historical schemaVersion; never edited once added
+  edits/<file>/                     # (0.2.0+) replacement files for hand-edit tests (renamed, invalid, too new, CRLF+BOM)
   interpreters/<name>/              # (0.3.0+) fake interpreters: scripts that answer `introspect` like a real env
   entrypoints/<name>/               # (0.3.0+) valid and broken entrypoint modules (non-importable, not spawn-safe…)
   runs/<name>/                      # (0.4.0+) pre-recorded run folders: complete, crashed, checkpoints, pruned
@@ -109,16 +111,19 @@ tests/fixtures/
 Rules:
 1. **Fixtures are read-only inputs.** A test copies a fixture into a fresh temp directory (pytest `tmp_path`,
    Playwright per-test temp dir) before using it. Nothing writes inside `tests/fixtures/`.
-2. **Every test gets its own temp workspace and its own Electron user-data dir**, created by a shared helper in
-   `tests/support/`, deleted on success and kept on failure (path printed, uploaded as a CI artefact).
+2. **Every test gets its own temp workspace and its own Electron user-data dir**, created by the suite's shared helper
+   (`tests/api/harness/`, `tests/e2e/support/`), deleted on success and kept on failure (path printed, uploaded as a CI artefact).
 3. **Paths are hostile on purpose.** Helpers create temp dirs whose names contain a space and a non-ASCII
    character (e.g. `ws é 1`), so path bugs show up on both OSes.
 4. **Small and text-only.** Fixtures are JSON/text, a few KB each. Never commit torch files, pickles or checkpoints
    from real runs (they are large and unsafe to load); a recorded real run keeps only its JSON files and logs.
-5. **Generated, not hand-edited, where possible.** Fixtures that a tool can produce (e.g. a migration-corpus file for
-   the current `schemaVersion`) are produced by a script committed next to them; the README says which.
-6. **Migration corpus is append-only.** When a file format gets `schemaVersion` N+1, a `v<N>` sample is added before
-   the change merges. Old samples are never edited: they are what users have on disk.
+5. **Generated, not hand-edited, where possible.** Fixtures that a tool can produce (e.g. the workspace fixtures,
+   `workspaces/generate.py`) are produced by a script committed next to them; the README says which.
+6. **Migration corpus is append-only and lives in one place.** Historical samples of each file type live only in
+   `packages/config-schema/tests/fixtures/<kind>/v<N>/` (developer-owned, TC-33); QA keeps no copy in
+   `tests/fixtures/`. When a file format gets `schemaVersion` N+1, a `v<N>` sample is added before the change
+   merges. Old samples are never edited: they are what users have on disk. Black-box tests read them as data
+   (§3) and copy them into their temp workspace; `tests/fixtures/workspaces/` holds current-version scenarios only.
 7. **No secrets.** Fixtures and logs never contain real tokens or API keys. Tests use generated tokens.
 8. **Per-launch token** for tests is passed by environment variable when a test needs a known token, otherwise read
    from the handshake line like Electron does.
