@@ -1,0 +1,38 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<h1 i18n="@@status.title">System status</h1>
+<dl class="status-list">
+  <dt i18n="@@status.backend">Backend</dt>
+  <dd class="status-health" data-testid="status-health" [attr.data-state]="health()">
+    @switch (health()) {
+      @case ('loading') {
+        <span i18n="@@status.health.loading">Checking…</span>
+      }
+      @case ('healthy') {
+        <span i18n="@@status.health.healthy">Healthy</span>
+      }
+      @case ('unauthorised') {
+        <span i18n="@@status.health.unauthorised">Not authorised: restart the app to get a new session</span>
+      }
+      @default {
+        <span i18n="@@status.health.unreachable">Unreachable</span>
+      }
+    }
+  </dd>
+  <dt i18n="@@status.version">Version</dt>
+  <dd data-testid="status-version">
+    @if (version(); as v) {
+      <span i18n="@@status.version.value">App {{ v.app_version }}, API {{ v.api_version }}</span>
+    } @else {
+      <span i18n="@@status.version.unknown">Unknown</span>
+    }
+  </dd>
+</dl>
+<button
+  type="button"
+  data-testid="status-refresh"
+  [disabled]="health() === 'loading'"
+  (click)="refresh()"
+  i18n="@@status.refresh"
+>
+  Check again
+</button>

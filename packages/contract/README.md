@@ -17,6 +17,7 @@ backend code.
 |---|---|---|
 | `openapi.json` | the backend's `export-openapi` script (TC-18) | never |
 | `src/generated/` | `openapi-typescript` (TC-22, ADR-0006) | never |
+| `src/client.ts`, `src/index.ts` | hand-written, small (ADR-0006) | yes, rarely |
 
 `openapi.json` is deterministic (UTF-8, LF, sorted keys, 2-space indent, trailing newline) and its `info.version`
 is the contract version (`API_VERSION` in `apps/backend/src/studio_backend/version.py`), not the app version.
@@ -36,3 +37,26 @@ package is first published (1.0.0).
 CI runs `export-openapi --check` (`tools/ci/hooks/contract-drift.py`) on Windows and Linux and fails with that
 command in the message when the committed file differs from the code. The backend's `tests/test_openapi.py` runs
 the same check, so `pytest` catches it locally too.
+
+## TypeScript client (TC-22, ADR-0006)
+`openapi-typescript` turns `openapi.json` into types (`src/generated/schema.ts`), and `openapi-fetch` is the runtime
+client. Both are pinned to exact versions; upgrading them is its own PR with the regenerated diff.
+
+```bash
+pnpm --filter @studio/contract generate    # after every openapi.json change; commit src/generated/
+pnpm --filter @studio/contract test        # client tests (fake fetch)
+```
+
+```ts
+import { createApiClient } from '@studio/contract';
+
+const api = createApiClient({ baseUrl: 'http://127.0.0.1:51234', getToken: () => token });
+const { data, error, response } = await api.GET('/api/health'); // fully typed from the schema
+```
+
+`getToken` is called on every request (the middleware sets `Authorization: Bearer <token>`), so a backend restart
+with a new token needs no new client. The package exports TypeScript source (`exports: ./src/index.ts`); its
+consumers (the Angular app, later the Electron shell) compile it, so there is no build step.
+
+The drift check (`tools/ci/hooks/contract-drift.py`) now also regenerates the types and fails if
+`src/generated/` differs from the commit. Route changes therefore mean: export, generate, commit both.

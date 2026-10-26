@@ -16,6 +16,23 @@
 .shell-title {
   font-size: var(--font-size-lg);
   font-weight: 600;
+  color: inherit;
+  text-decoration: none;
+}
+
+.shell-nav {
+  display: flex;
+  gap: var(--space-3);
+  margin-left: var(--space-4);
+
+  a {
+    color: var(--color-text-muted);
+    text-decoration: none;
+  }
+
+  a.active {
+    color: var(--color-accent);
+  }
 }
 
 .shell-main {
