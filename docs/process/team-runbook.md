@@ -10,13 +10,14 @@ All team state lives in **Jira (TC)** and **GitHub**; sessions are disposable.
 - Toolchain versions are pinned in the repo (see root README after TC-11).
 
 ## Sessions
-| Name | Role | Worktree | Playbook |
-|---|---|---|---|
-| `product-owner` | `[PO]` | own, from `dev` | roles/product-owner.md |
-| `dev-a` | `[DEV-A]`, Track A (backend, adapter, config-schema) | own, from `dev` | roles/developer.md |
-| `dev-b` | `[DEV-B]`, Track B (ui, desktop, generated client) | own, from `dev` | roles/developer.md |
-| `qa` | `[QA]` | own, from `dev` | roles/tester.md |
+| Name | Role | Worktree | Playbook | Model |
+|---|---|---|---|---|
+| `product-owner` | `[PO]` | own, from `dev` | roles/product-owner.md | Sonnet |
+| `dev-a` | `[DEV-A]`, Track A (backend, adapter, config-schema) | own, from `dev` | roles/developer.md | Opus |
+| `dev-b` | `[DEV-B]`, Track B (ui, desktop, generated client) | own, from `dev` | roles/developer.md | Opus |
+| `qa` | `[QA]` | own, from `dev` | roles/tester.md | Sonnet |
 
+Model choice is the owner's (2026-10-26): developers on the strongest model, PO and QA on Sonnet to save usage.
 The supervisor session runs in the main checkout (on `dev`) and starts the others.
 
 ## Restart brief (template)
