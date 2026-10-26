@@ -1,0 +1,24 @@
+// SPDX-License-Identifier: Apache-2.0
+.status-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-2) var(--space-4);
+  margin: var(--space-4) 0;
+}
+
+dt {
+  color: var(--color-text-muted);
+}
+
+dd {
+  margin: 0;
+}
+
+.status-health[data-state='healthy'] {
+  color: var(--color-success);
+}
+
+.status-health[data-state='unreachable'],
+.status-health[data-state='unauthorised'] {
+  color: var(--color-danger);
+}

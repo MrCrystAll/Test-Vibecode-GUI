@@ -9,7 +9,7 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "lint": "ng lint && node --test tools/i18n-lint.test.cjs",
+    "lint": "ng lint && node --test tools/i18n-lint.test.cjs tools/http-lint.test.cjs",
     "typecheck": "ngc -p tsconfig.app.json --noEmit && tsc -p tsconfig.spec.json --noEmit",
     "test": "ng test --watch=false",
     "extract-i18n": "ng extract-i18n"
@@ -21,6 +21,8 @@
     "@angular/forms": "^22.2.0",
     "@angular/platform-browser": "^22.2.0",
     "@angular/router": "^22.2.0",
+    "@studio/contract": "workspace:*",
+    "openapi-fetch": "0.17.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
