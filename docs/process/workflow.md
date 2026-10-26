@@ -48,8 +48,8 @@ All agents share one Jira account, so the assignee field can't tell them apart. 
   If it's already filed or being fixed, comment there instead.
 - **A ticket with an open PR is never reassigned** or restarted by someone else; status alone isn't enough to tell, so
   check `gh pr list --search "TC-<n>"` first.
-- **Duplicates:** link `duplicates` to the original, add the label `duplicate`, comment, and let QA close it together
-  with the original.
+- **Duplicates and dropped tickets:** link `duplicates` to the original, add the label `duplicate`, comment, then close it
+  with the Jira transition **Won't do / Duplicate** (available from To Do). The PO closes dropped tickets the same way.
 
 ### Blocked
 A ticket that cannot move is **not** a status. Instead:
