@@ -4,12 +4,12 @@
 from fastapi import FastAPI
 
 from studio_backend.api import system
-from studio_backend.errors import install_error_handlers
+from studio_backend.errors import ERROR_RESPONSES, install_error_handlers
 from studio_backend.version import API_VERSION
 
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Studio backend", version=API_VERSION)
     install_error_handlers(app)
-    app.include_router(system.router)
+    app.include_router(system.router, responses=ERROR_RESPONSES)
     return app
