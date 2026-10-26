@@ -311,7 +311,7 @@ through the release pipeline, and doesn't when the check is disabled; all 0.x wo
 schema and extension points (including the metrics sink) are documented and covered by contract tests; QA sign-off;
 release tagged `v1.0.0`.
 
-**Dependencies:** 0.9.0; an owner decision on risk R1 (below: update feed for a private repo) before S1/B4 can ship.
+**Dependencies:** 0.9.0; the repository being public (risk R1, resolved) before S1/B4 can ship.
 
 ---
 
@@ -337,7 +337,7 @@ release tagged `v1.0.0`.
 ---
 
 ## Owner decisions (2026-10-25)
-1. Hosting and CI: GitHub (`MrCrystAll/Test-Vibecode-GUI`, **private; stays private**, owner decision 2026-10-26) with GitHub Actions.
+1. Hosting and CI: GitHub (`MrCrystAll/Test-Vibecode-GUI`, **to be made public**, owner decision 2026-10-26; Apache-2.0 licence already in place) with GitHub Actions.
 2. Platforms for 1.0: Windows and Linux. No macOS.
 3. The backend ships bundled with its own Python, separate from the training interpreter. **The API process never
    imports torch; rlgym-learn is reached only through the adapter package.** Introspection runs in the user's
@@ -356,15 +356,10 @@ release tagged `v1.0.0`.
 12. English only for 1.0; the UI is i18n-ready from 0.1.0 (strings externalised).
 
 ## Open risks
-- **R1 — auto-update from a private repository (1.0.0).** Owner decision (2026-10-26): **the repository stays private.**
-  electron-updater cannot read private GitHub Releases without embedding a token in the app, which would leak
-  repository access to every user. Options for the 1.0.0 update feed, **to be chosen by the owner before 1.0.0
-  S1/B4**: (a) a separate public releases-only repository (binaries, no source); (b) a generic update host
-  (electron-updater `generic` provider on S3/R2 or similar); (c) manual update notification only (no in-app
-  install). Blocks 1.0.0 S1/B4.
-- **R2 — no branch protection (private repo, free plan).** GitHub returns 403 for branch protection without GitHub
-  Pro, so "no merge with red CI" is enforced by the merge script (a planned platform ticket) and the supervisor's
-  pre-merge checks (CI state, approved SHA, latest reviewer verdict). Revisit if the plan changes.
-- **R3 — GitHub Actions minutes.** Private repos get limited free minutes, and Windows runners count double. Watch
-  usage once TC-26 is live; if it runs short, trim the PR matrix (e.g. full Windows e2e only on `dev` and tags) before
-  paying.
+- **R1 — auto-update from a private repository (1.0.0): resolved (owner decision 2026-10-26).** The repository will be
+  made public, so electron-updater reads public GitHub Releases and no token is embedded in the app. The original
+  1.0.0 plan stands (B4 / S1).
+- **R2 — branch protection: resolved once the repository is public.** The supervisor enables protection on `dev` and
+  `main` after the switch: required CI checks, no force pushes. Required approvals are not possible because all agents
+  share one GitHub account, so peer review stays comment-based (`[DEV-x] APPROVED at <sha>` + `reviewed` label).
+  Until the switch, the supervisor's pre-merge checks are the gate.
