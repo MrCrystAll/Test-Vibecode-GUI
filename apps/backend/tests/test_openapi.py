@@ -99,9 +99,13 @@ def test_default_output_is_found_from_a_subfolder(
 
 
 def test_default_output_needs_a_repository(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # tmp_path may sit inside the real repository (CI uses --basetemp=<repo>/.ci-tmp), so look for
+    # a folder that exists in no ancestor; otherwise this test would rewrite the committed contract.
+    missing = Path("no-such-folder-tc44") / "contract" / "openapi.json"
+    monkeypatch.setattr(openapi, "CONTRACT_FILE", missing)
     monkeypatch.chdir(tmp_path)
 
-    with pytest.raises(SystemExit, match="packages/contract/ not found"):
+    with pytest.raises(SystemExit, match="no-such-folder-tc44/contract/ not found"):
         openapi.main([])
 
 
