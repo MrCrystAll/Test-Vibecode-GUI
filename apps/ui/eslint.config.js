@@ -25,7 +25,32 @@ module.exports = tseslint.config(
         'error',
         { type: 'element', prefix: 'app', style: 'kebab-case' },
       ],
+      // TC-22 AC4 / ADR-0006: the backend is reached only through the generated client in @studio/contract,
+      // so hand-written HTTP or WebSocket calls fail lint.
+      'no-restricted-globals': [
+        'error',
+        { name: 'fetch', message: 'Use the generated client (BackendApi), not fetch.' },
+        { name: 'XMLHttpRequest', message: 'Use the generated client (BackendApi).' },
+        { name: 'WebSocket', message: 'Use the @studio/contract WebSocket helpers (TC-20).' },
+      ],
+      'no-restricted-properties': [
+        'error',
+        { property: 'fetch', message: 'Use the generated client (BackendApi), not fetch.' },
+      ],
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            { name: '@angular/common/http', message: 'Use the generated client (ADR-0006).' },
+          ],
+        },
+      ],
     },
+  },
+  {
+    // The one allowed fetch: the browser-only dev connection file, a static asset (not a backend route).
+    files: ['src/app/core/api/backend-connection.ts'],
+    rules: { 'no-restricted-properties': 'off' },
   },
   {
     files: ['**/*.html'],
@@ -41,6 +66,8 @@ module.exports = tseslint.config(
           checkAttributes: true,
           requireDescription: false,
           requireMeaning: false,
+          // Test hooks for QA's e2e suite (TC-29), never shown to users.
+          ignoreAttributes: ['data-testid'],
         },
       ],
     },

@@ -1,2 +1,4 @@
 /out-tsc
 /tmp
+# Browser-only dev connection (copy public/dev-connection.example.json); never commit a token.
+/public/dev-connection.json

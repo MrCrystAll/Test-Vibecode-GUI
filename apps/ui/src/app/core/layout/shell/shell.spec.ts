@@ -18,5 +18,6 @@ describe('Shell', () => {
 
     expect(element.querySelector('header')?.textContent).toContain('rlgym-learn studio');
     expect(element.querySelector('main router-outlet')).not.toBeNull();
+    expect(element.querySelector('nav a[href="/status"]')?.textContent).toContain('System status');
   });
 });

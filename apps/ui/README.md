@@ -22,6 +22,32 @@ Run from `apps/ui/` (or `pnpm --filter @studio/ui <script>` from the repo root):
 | `pnpm build` | production build into `dist/ui` |
 | `pnpm extract-i18n` | extracts the message catalogue (`messages.xlf`) |
 
+## Talking to the backend (TC-22)
+Only through the generated client in `@studio/contract` (ADR-0006). `core/api/BackendApi` holds the single client
+instance, created at start-up by `provideBackendApi()`. Components read `inject(BackendApi).client()` and never see
+the token. ESLint rejects `fetch`, `XMLHttpRequest`, `WebSocket` and `@angular/common/http` everywhere in `src/`
+(`tools/http-lint.test.cjs` proves it). The one exception is `core/api/backend-connection.ts`, which reads the dev
+config below.
+
+The connection (`baseUrl` + token) is learned at runtime, never hard-coded:
+- **In Electron** (TC-23): from the preload bridge `window.studio.getBackendConnection()`.
+- **In a plain browser** (`pnpm start`): from `public/dev-connection.json`, which is git-ignored. Set it up once:
+  ```bash
+  cp public/dev-connection.example.json public/dev-connection.json   # baseUrl "" = same origin, via the proxy
+  uv run --package studio-backend studio-backend --port 8765          # from the repo root, in another shell
+  pnpm start                                                         # proxy.conf.json forwards /api to :8765
+  ```
+  Once the backend requires a token (TC-19), paste the one from its handshake line into `token`.
+
+Without a connection the app still starts; the System status screen (`/status`) then shows *Unreachable*.
+
+Two dev-server details, because `@studio/contract` ships TypeScript source (no build step):
+- `angular.json` → `serve.options.prebundle.exclude: ["@studio/contract"]`: Vite's dependency pre-bundler cannot
+  resolve the package's extensionless `.ts` imports, so Angular compiles it like app code instead.
+- `openapi-fetch` is also a direct dependency of this app, at the **same exact version** as in `packages/contract`
+  (pnpm keeps one copy). The dev server resolves bare imports from `apps/ui`, and pnpm's strict layout otherwise
+  hides the contract's own dependency. Bump both together.
+
 ## Folder structure (feature-sliced)
 ```
 src/
