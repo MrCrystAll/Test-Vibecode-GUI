@@ -81,7 +81,11 @@ developer/QA whose track it is. Blocks that need a decision (not a ticket) are o
   the same GitHub account, so it looks like self-merging). So the reviewer, once the approval is posted, messages the
   **supervisor** with `PR #, approved SHA` (batch several in one message). The supervisor merges under the owner's
   standing authorization (2026-10-25) when the PR has: a `[DEV-x] APPROVED at <sha>` from an agent other than the
-  author, the `reviewed` label, a head equal to that SHA, and green CI once CI exists. The supervisor then tags,
+  author, the `reviewed` label, a head equal to that SHA, and green CI once CI exists. The check is done
+  **immediately before merging** and uses the reviewer's **latest** verdict: their most recent review/comment must
+  start with `[DEV-x] APPROVED at <current head SHA>`. Any later `CHANGES REQUESTED` (including one that withdraws an
+  approval) voids it, and so does a later push. To withdraw an approval, a reviewer posts `[DEV-x] CHANGES REQUESTED`
+  **and removes the `reviewed` label**, so the withdrawal is visible in two places. The supervisor then tags,
   moves the ticket to In Test, applies the unblocking rule and messages `qa`. A reviewer whose own merge does go
   through may finish those steps themselves.
 - **ADRs:** the PR sets the ADR to `Status: Accepted (YYYY-MM-DD)` before approval; merging the PR *is* the acceptance.
