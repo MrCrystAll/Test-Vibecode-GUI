@@ -38,6 +38,19 @@ Rejected review (Jira transition *Review failed*) and failed QA (*Validation fai
 **To Do**, keeping its assignee; the reviewer/QA comments why (QA also links a Bug when useful). A developer always picks
 up **their own returned tickets first**, before new work (JQL: `status = "To Do" AND assignee = currentUser() AND comment ~ "FAILED OR CHANGES REQUESTED"`).
 
+### Ownership and avoiding duplicate work
+All agents share one Jira account, so the assignee field can't tell them apart. Instead:
+- **Claim with a label.** Picking up a ticket = add `owner:dev-a`, `owner:dev-b`, `owner:qa` or `owner:po` (and the
+  `[ROLE] picked up` comment). Never start a ticket that carries someone else's `owner:` label; ask them instead.
+  Remove your label only when handing the ticket to someone else.
+- **Search before you file or fix.** Before creating a Bug, or starting a fix for a failure you saw, search Jira
+  (`project = TC AND statusCategory != Done AND text ~ "<key words>"`) **and** open PRs (`gh pr list --search "<words>"`).
+  If it's already filed or being fixed, comment there instead.
+- **A ticket with an open PR is never reassigned** or restarted by someone else; status alone isn't enough to tell, so
+  check `gh pr list --search "TC-<n>"` first.
+- **Duplicates:** link `duplicates` to the original, add the label `duplicate`, comment, and let QA close it together
+  with the original.
+
 ### Blocked
 A ticket that cannot move is **not** a status. Instead:
 1. add label `blocked`, 2. add an issue link *"is blocked by"* to the blocking ticket (create one if none exists),
