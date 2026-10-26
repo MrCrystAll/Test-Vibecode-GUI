@@ -1,12 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
+from conftest import authorized_client, make_app
 from fastapi.testclient import TestClient
-
-from studio_backend.app import create_app
 
 
 def _test_app_client() -> TestClient:
     """The real app plus two test-only routes that trigger a 422 and a 500."""
-    app = create_app()
+    app = make_app()
 
     @app.get("/test/items/{item_id}")
     def get_item(item_id: int) -> dict[str, int]:
@@ -16,7 +15,7 @@ def _test_app_client() -> TestClient:
     def crash() -> None:
         raise RuntimeError("boom")
 
-    return TestClient(app, raise_server_exceptions=False)
+    return authorized_client(app, raise_server_exceptions=False)
 
 
 def _assert_error_shape(body: dict[str, object], code: str) -> None:

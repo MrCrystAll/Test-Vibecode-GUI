@@ -49,3 +49,19 @@ def test_exceptions_are_logged_inside_the_json_line() -> None:
     record = json.loads(line)
     assert record["message"] == "failed"
     assert "RuntimeError: boom" in record["exc_info"]
+
+
+@pytest.mark.usefixtures("restore_root_logger")
+def test_secrets_are_redacted_from_messages_and_tracebacks() -> None:
+    stream = io.StringIO()
+    configure_logging("info", stream=stream, secrets=("s3cret-token",))
+
+    logging.getLogger("uvicorn.access").info("GET /ws?token=%s 403", "s3cret-token")
+    try:
+        raise ValueError("bad s3cret-token")
+    except ValueError:
+        logging.getLogger("studio_backend.test").exception("failed")
+
+    output = stream.getvalue()
+    assert "s3cret-token" not in output
+    assert "GET /ws?token=*** 403" in output

@@ -3,12 +3,18 @@
 
 Precedence: CLI argument > environment variable > default. The backend never reads settings
 from the current working directory (ADR-0005).
+
+The token is read from the environment only, never from the command line, because command lines
+are visible to every local user (process lists).
 """
 
 import argparse
 import os
+import re
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+from studio_backend.security import generate_token
 
 ENV_PREFIX = "STUDIO_BACKEND_"
 LOG_LEVELS = ("debug", "info", "warning", "error", "critical")
@@ -16,6 +22,9 @@ LOG_LEVELS = ("debug", "info", "warning", "error", "critical")
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 0
 DEFAULT_LOG_LEVEL = "info"
+MIN_TOKEN_LENGTH = 32
+_TOKEN_PATTERN = re.compile(r"[A-Za-z0-9_\-.~]+")  # safe in a header and a query string
+_TRUE = ("1", "true", "yes")
 
 
 @dataclass(frozen=True)
@@ -23,6 +32,9 @@ class Settings:
     host: str = DEFAULT_HOST
     port: int = DEFAULT_PORT
     log_level: str = DEFAULT_LOG_LEVEL
+    token: str = field(default_factory=generate_token, repr=False)
+    allowed_origins: tuple[str, ...] = ()
+    unsafe_bind_any: bool = False
 
 
 class SettingsError(ValueError):
@@ -47,11 +59,24 @@ def _parse_log_level(raw: str, source: str) -> str:
     return level
 
 
+def _parse_token(raw: str, source: str) -> str:
+    if len(raw) < MIN_TOKEN_LENGTH or not _TOKEN_PATTERN.fullmatch(raw):
+        raise SettingsError(
+            f"{source}: token must be at least {MIN_TOKEN_LENGTH} characters of A-Z a-z 0-9 - _ . ~"
+        )
+    return raw
+
+
+def _parse_origins(raw: str) -> tuple[str, ...]:
+    return tuple(origin.strip() for origin in raw.split(",") if origin.strip())
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="studio_backend",
         description="Studio backend. Prints one JSON line on stdout once ready: "
-        '{"event": "listening", "port": N}.',
+        '{"event": "listening", "port": N, "token": "..."}. '
+        f"The token comes from {ENV_PREFIX}TOKEN, or is generated.",
     )
     parser.add_argument(
         "--host", help=f"Interface to bind (env {ENV_PREFIX}HOST, default {DEFAULT_HOST})."
@@ -64,6 +89,19 @@ def build_parser() -> argparse.ArgumentParser:
         "--log-level",
         help=f"One of {', '.join(LOG_LEVELS)} "
         f"(env {ENV_PREFIX}LOG_LEVEL, default {DEFAULT_LOG_LEVEL}).",
+    )
+    parser.add_argument(
+        "--allowed-origin",
+        action="append",
+        help="Browser origin allowed to call the API, repeatable "
+        f"(env {ENV_PREFIX}ALLOWED_ORIGINS, comma-separated; default none).",
+    )
+    parser.add_argument(
+        "--unsafe-bind-any",
+        action="store_true",
+        default=None,
+        help=f"Development only: allow --host other than {DEFAULT_HOST} "
+        f"(env {ENV_PREFIX}UNSAFE_BIND_ANY=1).",
     )
     return parser
 
@@ -78,6 +116,13 @@ def load_settings(
     host = DEFAULT_HOST
     port = DEFAULT_PORT
     log_level = DEFAULT_LOG_LEVEL
+    allowed_origins: tuple[str, ...] = ()
+    unsafe_bind_any = environ.get(f"{ENV_PREFIX}UNSAFE_BIND_ANY", "").lower() in _TRUE
+    token = (
+        _parse_token(environ[f"{ENV_PREFIX}TOKEN"], f"{ENV_PREFIX}TOKEN")
+        if f"{ENV_PREFIX}TOKEN" in environ
+        else generate_token()
+    )
 
     if f"{ENV_PREFIX}HOST" in environ:
         host = environ[f"{ENV_PREFIX}HOST"]
@@ -85,6 +130,8 @@ def load_settings(
         port = _parse_port(environ[f"{ENV_PREFIX}PORT"], f"{ENV_PREFIX}PORT")
     if f"{ENV_PREFIX}LOG_LEVEL" in environ:
         log_level = _parse_log_level(environ[f"{ENV_PREFIX}LOG_LEVEL"], f"{ENV_PREFIX}LOG_LEVEL")
+    if f"{ENV_PREFIX}ALLOWED_ORIGINS" in environ:
+        allowed_origins = _parse_origins(environ[f"{ENV_PREFIX}ALLOWED_ORIGINS"])
 
     if args.host is not None:
         host = args.host
@@ -92,5 +139,22 @@ def load_settings(
         port = _parse_port(args.port, "--port")
     if args.log_level is not None:
         log_level = _parse_log_level(args.log_level, "--log-level")
+    if args.allowed_origin is not None:
+        allowed_origins = tuple(args.allowed_origin)
+    if args.unsafe_bind_any is not None:
+        unsafe_bind_any = True
 
-    return Settings(host=host, port=port, log_level=log_level)
+    if host != DEFAULT_HOST and not unsafe_bind_any:
+        raise SettingsError(
+            f"host must be {DEFAULT_HOST} (got {host!r}); binding elsewhere exposes the API to "
+            f"other machines and needs --unsafe-bind-any / {ENV_PREFIX}UNSAFE_BIND_ANY=1"
+        )
+
+    return Settings(
+        host=host,
+        port=port,
+        log_level=log_level,
+        token=token,
+        allowed_origins=allowed_origins,
+        unsafe_bind_any=unsafe_bind_any,
+    )
