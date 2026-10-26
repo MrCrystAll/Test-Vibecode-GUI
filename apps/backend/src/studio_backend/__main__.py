@@ -16,7 +16,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     except SettingsError as exc:
         print(f"studio_backend: error: {exc}", file=sys.stderr)
         return 2
-    configure_logging(settings.log_level)
+    configure_logging(settings.log_level, secrets=(settings.token,))
     try:
         run(settings)
     except OSError as exc:

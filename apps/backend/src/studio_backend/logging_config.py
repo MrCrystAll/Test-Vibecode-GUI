@@ -7,6 +7,7 @@ stdout is reserved for machine-readable events (the handshake), so nothing here 
 import json
 import logging
 import sys
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import TextIO
 
@@ -14,23 +15,42 @@ from typing import TextIO
 _UVICORN_LOGGERS = ("uvicorn", "uvicorn.error", "uvicorn.access")
 
 
+REDACTED = "***"
+
+
 class JsonFormatter(logging.Formatter):
+    """One JSON object per record. Every string in `secrets` is replaced by `***` (TC-19)."""
+
+    def __init__(self, secrets: Sequence[str] = ()) -> None:
+        super().__init__()
+        self.secrets = tuple(s for s in secrets if s)
+
+    def _redact(self, text: str) -> str:
+        for secret in self.secrets:
+            text = text.replace(secret, REDACTED)
+        return text
+
     def format(self, record: logging.LogRecord) -> str:
         entry: dict[str, object] = {
             "ts": datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
             "level": record.levelname.lower(),
             "logger": record.name,
-            "message": record.getMessage(),
+            "message": self._redact(record.getMessage()),
         }
         if record.exc_info:
-            entry["exc_info"] = self.formatException(record.exc_info)
+            entry["exc_info"] = self._redact(self.formatException(record.exc_info))
         return json.dumps(entry, ensure_ascii=False)
 
 
-def configure_logging(level: str, stream: TextIO | None = None) -> None:
-    """Send all logs, including uvicorn's, as JSON lines to `stream` (default: stderr)."""
+def configure_logging(
+    level: str, stream: TextIO | None = None, secrets: Sequence[str] = ()
+) -> None:
+    """Send all logs, including uvicorn's, as JSON lines to `stream` (default: stderr).
+
+    `secrets` (the API token) never appear in the output, e.g. in an access-log query string.
+    """
     handler = logging.StreamHandler(sys.stderr if stream is None else stream)
-    handler.setFormatter(JsonFormatter())
+    handler.setFormatter(JsonFormatter(secrets))
 
     root = logging.getLogger()
     root.handlers = [handler]

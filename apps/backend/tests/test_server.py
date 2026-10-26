@@ -67,21 +67,33 @@ def test_port_zero_announces_the_bound_port_as_first_stdout_line(
 ) -> None:
     event = json.loads(backend.first_stdout_line())
 
-    assert set(event) == {"event", "port"}
+    assert set(event) == {"event", "port", "token", "pid"}
     assert event["event"] == "listening"
     assert isinstance(event["port"], int) and event["port"] > 0
-    response = httpx.get(f"http://127.0.0.1:{event['port']}/api/health", timeout=5)
-    assert response.json() == {"status": "ok"}
+    assert isinstance(event["pid"], int) and event["pid"] > 0
+    if sys.platform != "win32":
+        # On Windows a venv's python.exe is a launcher that starts the real interpreter as a
+        # child, which is exactly why the handshake reports its own pid.
+        assert event["pid"] == backend.process.pid
+    base = f"http://127.0.0.1:{event['port']}"
+    assert httpx.get(f"{base}/api/health", timeout=5).json() == {"status": "ok"}
+    assert httpx.get(f"{base}/api/version", timeout=5).status_code == 401
+    authorized = {"Authorization": f"Bearer {event['token']}"}
+    assert httpx.get(f"{base}/api/version", headers=authorized, timeout=5).status_code == 200
 
 
-def test_stderr_carries_json_logs(backend: BackendProcess) -> None:
-    backend.first_stdout_line()
+def test_stderr_carries_json_logs_without_the_token(backend: BackendProcess) -> None:
+    event = json.loads(backend.first_stdout_line())
+    base = f"http://127.0.0.1:{event['port']}"
+    httpx.get(f"{base}/api/version?token={event['token']}", timeout=5)  # lands in the access log
     backend.stop()
 
     lines = [line for line in backend.stderr_lines() if line.strip()]
     assert lines
     for line in lines:
         assert "level" in json.loads(line)
+    assert event["token"] not in "".join(lines)
+    assert any("token=***" in line for line in lines)
 
 
 def test_two_instances_get_different_ports(backend: BackendProcess) -> None:
