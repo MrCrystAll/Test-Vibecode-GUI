@@ -1,0 +1,23 @@
+# The PR title becomes the squash-merge commit subject, so it must follow workflow.md "Commits" (TC-27).
+name: PR title
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+    branches: [dev, main]
+
+permissions:
+  contents: read
+
+jobs:
+  pr-title:
+    name: pr-title
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the PR title
+        # Passed through the environment, never interpolated into the script (titles are untrusted input).
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: python3 tools/ci/pr_title.py "$PR_TITLE"
