@@ -37,7 +37,9 @@ The connection (`baseUrl` + token) is learned at runtime, never hard-coded:
   uv run --package studio-backend studio-backend --port 8765          # from the repo root, in another shell
   pnpm start                                                         # proxy.conf.json forwards /api to :8765
   ```
-  Once the backend requires a token (TC-19), paste the one from its handshake line into `token`.
+  Paste the `token` from the backend's handshake line (`{"event":"listening",...,"token":"…"}`, TC-19) into
+  `dev-connection.json`. Requests go through the proxy, so they are same-origin; if the backend ever rejects them
+  with 403 `origin_not_allowed`, start it with `STUDIO_BACKEND_ALLOWED_ORIGINS=http://localhost:4200`.
 
 Without a connection the app still starts; the System status screen (`/status`) then shows *Unreachable*.
 
