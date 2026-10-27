@@ -2,7 +2,7 @@
 
 Four AI agents and a supervisor work this repo, coordinated through **Jira project `TC`**
 (https://mathsuch63.atlassian.net, cloudId `7cf42fa5-f7fa-41ec-9758-6dd34429a227`) and git
-(GitHub: https://github.com/MrCrystAll/Test-Vibecode-GUI, private; use `gh`).
+(GitHub: https://github.com/MrCrystAll/Test-Vibecode-GUI, public since 2026-10-26; use `gh`).
 All agents share one human's Jira/GitHub identity, so **every Jira comment, PR description and PR review starts
 with a role tag**: `[PO]`, `[DEV-A]`, `[DEV-B]`, `[QA]`, `[SUPERVISOR]`.
 
@@ -106,6 +106,11 @@ developer/QA whose track it is. Blocks that need a decision (not a ticket) are o
   through may finish those steps themselves.
 - **ADRs:** the PR sets the ADR to `Status: Accepted (YYYY-MM-DD)` before approval; merging the PR *is* the acceptance.
   A rejected ADR is closed, not merged. Superseding happens in a new ADR.
+- **Branch protection** (since 2026-10-26, repo public): `dev` and `main` accept changes **only through PRs** whose CI
+  checks `checks (ubuntu-latest)` and `checks (windows-latest)` are green; no direct pushes, force-pushes or deletions,
+  and this applies to admins too (every agent is the same admin account). This includes the supervisor's own docs
+  changes. GitHub can't require approvals (one account can't approve its own PR), so peer review stays
+  `[DEV-x] APPROVED at <sha>` + `reviewed`, checked by the merger.
 - Release PRs `dev → main` are opened by the supervisor after QA signs off an epic, and merged with a merge commit.
 
 ## Versioning (SemVer 2.0 with pre-releases)
