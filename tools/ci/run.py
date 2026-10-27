@@ -40,6 +40,8 @@ HOOKS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ("import-boundaries", "tools/ci/hooks/import-boundaries.py", ()),
     # TC-42: the committed workspace fixtures match their generator
     ("workspace-fixtures", "tests/fixtures/workspaces/generate.py", ("--check",)),
+    # TC-28: every dependency's licence is on the allow-list in tools/ci/licenses.toml
+    ("licenses", "tools/ci/hooks/licenses.py", ()),
 )
 IN_GITHUB_ACTIONS = os.environ.get("GITHUB_ACTIONS") == "true"
 
@@ -71,7 +73,9 @@ def _table(data: dict[str, object], *keys: str) -> dict[str, object]:
 
 def uv_members(root: Path = ROOT) -> list[UvMember]:
     """Workspace members listed in the root pyproject.toml (glob patterns allowed)."""
-    patterns = _table(load_toml(root / "pyproject.toml"), "tool", "uv", "workspace").get("members", [])
+    patterns = _table(load_toml(root / "pyproject.toml"), "tool", "uv", "workspace").get(
+        "members", []
+    )
     if not isinstance(patterns, list):
         raise SystemExit("[tool.uv.workspace] members must be a list")
     members = []
@@ -109,7 +113,9 @@ def pnpm_command() -> list[str]:
 def uv_command() -> list[str]:
     uv = shutil.which("uv")
     if not uv:
-        raise SystemExit("uv not found: see https://docs.astral.sh/uv/getting-started/installation/")
+        raise SystemExit(
+            "uv not found: see https://docs.astral.sh/uv/getting-started/installation/"
+        )
     return [uv]
 
 
@@ -150,7 +156,9 @@ def _pnpm_script(script: str) -> list[str]:
 def step_lint(runner: Runner) -> None:
     for member in uv_members():
         if member.has_ruff:
-            runner.run(f"ruff check: {member.name}", _uv_tool(member, "ruff", "check", "."), member.path)
+            runner.run(
+                f"ruff check: {member.name}", _uv_tool(member, "ruff", "check", "."), member.path
+            )
             runner.run(
                 f"ruff format: {member.name}",
                 _uv_tool(member, "ruff", "format", "--check", "."),
@@ -182,7 +190,9 @@ def step_test(runner: Runner) -> None:
                 member.path,
             )
         else:
-            print(f"pytest: {member.name} has no tests/ folder or [tool.pytest.ini_options], skipped")
+            print(
+                f"pytest: {member.name} has no tests/ folder or [tool.pytest.ini_options], skipped"
+            )
     runner.run("pnpm test", _pnpm_script("test"))
 
 
