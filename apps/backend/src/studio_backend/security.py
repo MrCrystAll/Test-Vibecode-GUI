@@ -7,9 +7,11 @@ One ASGI middleware, outermost, checks every HTTP request and WebSocket handshak
 2. An `Origin` header, when present, must be allowed (browsers always send one; Electron's
    main process, the CLI and tests send none) -> 403 `origin_not_allowed`.
 3. Every route except `/api/health` needs the per-launch token -> 401 `unauthorized`:
-   HTTP: `Authorization: Bearer <token>`. WebSocket: the same header, or `?token=<token>` because
-   browsers cannot set headers on a WebSocket. CORS preflights (`OPTIONS` + `Access-Control-Request-
-   Method`) carry no credentials by design and are passed to the CORS middleware unauthenticated.
+   HTTP: `Authorization: Bearer <token>`. WebSocket: the same header, or, because browsers
+   cannot set headers on a WebSocket, the subprotocol `bearer.<token>` next to `studio.v1`
+   (ADR-0006). The token is never accepted in a URL. CORS preflights (`OPTIONS` +
+   `Access-Control-Request-Method`) carry no credentials by design and are passed to the CORS
+   middleware unauthenticated.
 
 Rejected WebSocket handshakes are closed before `accept`, which uvicorn turns into HTTP 403.
 """
@@ -19,7 +21,6 @@ import json
 import secrets
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from urllib.parse import parse_qs
 
 from starlette.types import ASGIApp, Receive, Scope, Send
 
@@ -28,6 +29,7 @@ from studio_backend.errors import error_body
 PUBLIC_PATHS = frozenset({"/api/health"})
 LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost"})
 TOKEN_BYTES = 32  # 256 bits; the ticket asks for at least 128
+BEARER_SUBPROTOCOL_PREFIX = "bearer."
 
 
 def generate_token() -> str:
@@ -57,8 +59,11 @@ def _bearer(headers: dict[str, str]) -> str | None:
     return credentials.strip() if scheme.lower() == "bearer" and credentials else None
 
 
-def _query_tokens(scope: Scope) -> Iterable[str]:
-    return parse_qs(scope.get("query_string", b"").decode("latin-1")).get("token", [])
+def subprotocol_tokens(scope: Scope) -> Iterable[str]:
+    """Tokens offered as `bearer.<token>` WebSocket subprotocols."""
+    for protocol in scope.get("subprotocols", []):
+        if protocol.startswith(BEARER_SUBPROTOCOL_PREFIX):
+            yield protocol.removeprefix(BEARER_SUBPROTOCOL_PREFIX)
 
 
 class SecurityMiddleware:
@@ -88,7 +93,7 @@ class SecurityMiddleware:
             return None
         candidates = [_bearer(headers)]
         if scope["type"] == "websocket":
-            candidates.extend(_query_tokens(scope))
+            candidates.extend(subprotocol_tokens(scope))
         if not any(self._token_ok(c) for c in candidates):
             return 401, "unauthorized", "Missing or invalid bearer token"
         return None

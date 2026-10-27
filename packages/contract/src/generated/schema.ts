@@ -42,6 +42,8 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** EmptyPayload */
+        EmptyPayload: Record<string, never>;
         /** ErrorDetail */
         ErrorDetail: {
             /** Code */
@@ -50,6 +52,21 @@ export interface components {
             details?: unknown;
             /** Message */
             message: string;
+        };
+        /** ErrorPayload */
+        ErrorPayload: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "invalid_json" | "invalid_envelope" | "unsupported_version" | "unknown_type" | "invalid_payload" | "unknown_topic";
+            /** Message */
+            message: string;
+            /**
+             * Reply To
+             * @default null
+             */
+            reply_to: string | null;
         };
         /**
          * ErrorResponse
@@ -66,12 +83,218 @@ export interface components {
              */
             status: "ok";
         };
+        /**
+         * ReplyPayload
+         * @description Payload of a reply: the `id` of the client message it answers, if any.
+         */
+        ReplyPayload: {
+            /**
+             * Reply To
+             * @default null
+             */
+            reply_to: string | null;
+        };
+        /** TopicPayload */
+        TopicPayload: {
+            /**
+             * Topic
+             * @constant
+             */
+            topic: "system";
+        };
+        /** TopicReplyPayload */
+        TopicReplyPayload: {
+            /** Reply To */
+            reply_to: string;
+            /**
+             * Topic
+             * @constant
+             */
+            topic: "system";
+        };
         /** VersionResponse */
         VersionResponse: {
             /** Api Version */
             api_version: string;
             /** App Version */
             app_version: string;
+        };
+        WsClientMessage: components["schemas"]["WsPing"] | components["schemas"]["WsPong"] | components["schemas"]["WsSubscribe"] | components["schemas"]["WsUnsubscribe"];
+        /**
+         * WsError
+         * @description Server: a client message was rejected. The connection stays open.
+         */
+        WsError: {
+            /** Id */
+            id: string;
+            payload: components["schemas"]["ErrorPayload"];
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "error";
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
+        };
+        /**
+         * WsPing
+         * @description Keep-alive. The server sends one every ping interval; a client may send one too.
+         */
+        WsPing: {
+            /** Id */
+            id: string;
+            payload: components["schemas"]["EmptyPayload"];
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "ping";
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
+        };
+        /**
+         * WsPong
+         * @description Answer to a `ping`. The server's pong names the client ping in `payload.reply_to`.
+         */
+        WsPong: {
+            /** Id */
+            id: string;
+            payload: components["schemas"]["ReplyPayload"];
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "pong";
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
+        };
+        WsServerMessage: components["schemas"]["WsPing"] | components["schemas"]["WsPong"] | components["schemas"]["WsSubscribed"] | components["schemas"]["WsUnsubscribed"] | components["schemas"]["WsError"];
+        /**
+         * WsSubscribe
+         * @description Client: start receiving events of a topic.
+         */
+        WsSubscribe: {
+            /** Id */
+            id: string;
+            payload: components["schemas"]["TopicPayload"];
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "subscribe";
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
+        };
+        /**
+         * WsSubscribed
+         * @description Server: the subscription in `payload.reply_to` is active.
+         */
+        WsSubscribed: {
+            /** Id */
+            id: string;
+            payload: components["schemas"]["TopicReplyPayload"];
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "subscribed";
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
+        };
+        /**
+         * WsUnsubscribe
+         * @description Client: stop receiving events of a topic.
+         */
+        WsUnsubscribe: {
+            /** Id */
+            id: string;
+            payload: components["schemas"]["TopicPayload"];
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "unsubscribe";
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
+        };
+        /**
+         * WsUnsubscribed
+         * @description Server: the topic is no longer delivered.
+         */
+        WsUnsubscribed: {
+            /** Id */
+            id: string;
+            payload: components["schemas"]["TopicReplyPayload"];
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "unsubscribed";
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
         };
     };
     responses: never;

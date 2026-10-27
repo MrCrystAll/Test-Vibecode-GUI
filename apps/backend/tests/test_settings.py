@@ -91,3 +91,17 @@ def test_cli_origins_replace_env_origins() -> None:
     )
 
     assert settings.allowed_origins == ("app://x", "app://y")
+
+
+def test_ws_ping_interval_from_env_and_cli() -> None:
+    env = {"STUDIO_BACKEND_WS_PING_INTERVAL": "2.5"}
+
+    assert load_settings([], env={}).ws_ping_interval == 15.0
+    assert load_settings([], env=env).ws_ping_interval == 2.5
+    assert load_settings(["--ws-ping-interval", "0.5"], env=env).ws_ping_interval == 0.5
+
+
+@pytest.mark.parametrize("interval", ["0", "-1", "abc", "3601"])
+def test_invalid_ws_ping_interval_is_rejected(interval: str) -> None:
+    with pytest.raises(SettingsError, match="--ws-ping-interval"):
+        load_settings(["--ws-ping-interval", interval], env={})
