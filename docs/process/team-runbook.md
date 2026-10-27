@@ -35,3 +35,15 @@ Give each session this brief, filled in:
 ## Checkpoint before stopping the team
 The supervisor messages every agent: push all branches (`wip:` commits allowed), comment `[TAG] CHECKPOINT: <state, next
 step, branch, PR>` on each owned ticket, start nothing new, and end the turn. Only then stop or archive the sessions.
+
+## Fresh session per ticket (developers)
+Decided by the owner on 2026-10-27. Every step a session takes re-reads its whole history. A developer session that has
+carried several tickets (about 500K tokens) spends the shared plan's usage limit several times faster than a fresh one,
+so the team gets less done before each limit reset.
+- A developer **checkpoints at each ticket boundary**: its ticket is To Review with CI green. It uses the checkpoint steps
+  above, then tells the supervisor "checkpointed" with its PR numbers and head SHAs.
+- The supervisor starts a **fresh session** for that role with the restart brief, then archives the old session. Only one
+  session per role is live at a time, so the old one must have checkpointed first.
+- Answering review comments on a PR that is already open is not a ticket boundary. The fresh session picks the PR up from
+  its CHECKPOINT comment.
+- PO and QA sessions restart the same way when their context passes about 300K tokens (`get_usage` shows it).
