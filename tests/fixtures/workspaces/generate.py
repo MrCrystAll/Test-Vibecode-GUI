@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Generate the black-box workspace fixtures in this folder (TC-42).
 
 Stdlib only, deterministic: running it twice gives byte-identical files on Windows and Linux.
