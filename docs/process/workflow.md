@@ -85,6 +85,8 @@ developer/QA whose track it is. Blocks that need a decision (not a ticket) are o
 `backend`, `adapter`, `contract`, `config`, `ci`, `docs`. Breaking changes use `!` / `BREAKING CHANGE:` footers.
 The PR title becomes the squash-merge subject, so it must read `type(scope): summary (TC-n)`; the `pr-title` CI job
 checks it with [tools/ci/pr_title.py](../../tools/ci/pr_title.py) (run it locally with the title as argument).
+Only two kinds of title may omit the ticket key: process documents, `docs(process|adr|product): <summary>`, and
+release PRs into `main`, `release: vX.Y.Z`. Every other PR needs `(TC-n)`.
 
 ### Pull requests
 - Target `dev`. Title = conventional-commit summary + ticket key. Body: ticket link, what/why, test evidence, screenshots for UI.
