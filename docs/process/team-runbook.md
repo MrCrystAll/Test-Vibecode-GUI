@@ -44,6 +44,8 @@ so the team gets less done before each limit reset.
   above, then tells the supervisor "checkpointed" with its PR numbers and head SHAs.
 - The supervisor starts a **fresh session** for that role with the restart brief, then archives the old session. Only one
   session per role is live at a time, so the old one must have checkpointed first.
+- Right after the restart, the supervisor sends every peer the new session id. Messages sent to an archived session are
+  lost, so the supervisor also forwards any request still pending, such as reviews asked of the old session.
 - Answering review comments on a PR that is already open is not a ticket boundary. The fresh session picks the PR up from
   its CHECKPOINT comment.
 - PO and QA sessions restart the same way when their context passes about 300K tokens (`get_usage` shows it).
