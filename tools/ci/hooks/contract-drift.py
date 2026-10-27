@@ -3,7 +3,7 @@
 
 1. TC-18: packages/contract/openapi.json matches the backend routes (`export-openapi --check`).
 2. TC-22: the generated TypeScript types match openapi.json
-   (`pnpm --filter @studio/contract generate`, then `git diff --exit-code` on the generated folder).
+   (`pnpm --filter @studio/contract generate`, then `git status --porcelain` on the output).
 
 Run by tools/ci/run.py (`hooks` step) from the repository root.
 """
@@ -35,7 +35,15 @@ def main() -> int:
         return 1
     if _run([*_pnpm(), "--filter", "@studio/contract", "run", "generate"]) != 0:
         return 1
-    if _run(["git", "diff", "--exit-code", "--", GENERATED]) != 0:
+    # --porcelain also lists new untracked files, which `git diff` would miss.
+    status = subprocess.run(  # noqa: S603 - fixed command
+        ["git", "status", "--porcelain", "--", GENERATED],  # noqa: S607 - git on PATH
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    if status.strip():
+        print(status, end="", file=sys.stderr)
         print(
             f"{GENERATED} is out of date with openapi.json.\n"
             "Run `pnpm --filter @studio/contract generate` and commit the result.",
