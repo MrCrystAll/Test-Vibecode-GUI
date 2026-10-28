@@ -3,6 +3,7 @@
 
 import io
 import json
+import os
 import queue
 import subprocess
 import sys
@@ -11,16 +12,18 @@ from collections.abc import Iterator
 
 import httpx
 import pytest
+from websockets.sync.client import connect as ws_connect
 
-from studio_backend.server import announce
+from studio_backend.server import announce, watch_stdin
 
 STARTUP_TIMEOUT_S = 30
 
 
 class BackendProcess:
-    def __init__(self, *args: str) -> None:
+    def __init__(self, *args: str, stdin: int | None = None) -> None:
         self.process = subprocess.Popen(
             [sys.executable, "-m", "studio_backend", *args],
+            stdin=stdin,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -82,6 +85,35 @@ def test_port_zero_announces_the_bound_port_as_first_stdout_line(
     assert httpx.get(f"{base}/api/version", headers=authorized, timeout=5).status_code == 200
 
 
+def test_real_server_speaks_websocket_on_ws() -> None:
+    """/ws over a real socket, not Starlette's in-process TestClient (DEV-B's finding on TC-20).
+
+    Fails if uvicorn has no WebSocket implementation installed.
+    """
+    process = BackendProcess("--port", "0", "--ws-ping-interval", "0.1")
+    try:
+        event = json.loads(process.first_stdout_line())
+        url = f"ws://127.0.0.1:{event['port']}/ws"
+        subprotocols = ["studio.v1", f"bearer.{event['token']}"]
+        with ws_connect(url, subprotocols=subprotocols, open_timeout=5) as ws:  # type: ignore[arg-type]
+            assert ws.subprotocol == "studio.v1"
+            assert json.loads(ws.recv(timeout=5))["type"] == "ping"  # server ping
+            client_ping = {
+                "type": "ping",
+                "version": 1,
+                "id": "c-1",
+                "ts": "2026-10-28T10:00:00Z",
+                "payload": {},
+            }
+            ws.send(json.dumps(client_ping))
+            replies = [json.loads(ws.recv(timeout=5)) for _ in range(3)]
+        assert {"type": "pong", "reply_to": "c-1"} in [
+            {"type": r["type"], "reply_to": r["payload"].get("reply_to")} for r in replies
+        ]
+    finally:
+        process.stop()
+
+
 def test_stderr_carries_json_logs_without_the_token(backend: BackendProcess) -> None:
     event = json.loads(backend.first_stdout_line())
     base = f"http://127.0.0.1:{event['port']}"
@@ -126,3 +158,37 @@ def test_announce_writes_one_compact_json_line() -> None:
     announce({"event": "listening", "port": 1234}, stream=stream)
 
     assert stream.getvalue() == '{"event":"listening","port":1234}\n'
+
+
+def test_closing_stdin_stops_the_backend_gracefully() -> None:
+    backend = BackendProcess("--port", "0", "--shutdown-on-stdin-eof", stdin=subprocess.PIPE)
+    try:
+        json.loads(backend.first_stdout_line())
+        assert backend.process.stdin is not None
+        backend.process.stdin.close()
+
+        assert backend.process.wait(timeout=STARTUP_TIMEOUT_S) == 0
+    finally:
+        if backend.process.poll() is None:
+            backend.stop()
+    assert any("stdin closed" in line for line in backend.stderr_lines())
+
+
+class _FakeServer:
+    should_exit = False
+
+
+def test_watch_stdin_asks_the_server_to_exit_at_end_of_file() -> None:
+    read_fd, write_fd = os.pipe()
+    server = _FakeServer()
+    with os.fdopen(read_fd, "rb") as stream:
+        thread = watch_stdin(server, stream)
+        os.write(write_fd, b"ignored")
+        thread.join(timeout=0.2)
+        assert thread.is_alive() and not server.should_exit  # data alone changes nothing
+
+        os.close(write_fd)
+        thread.join(timeout=5)
+
+    assert not thread.is_alive()
+    assert server.should_exit

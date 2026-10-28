@@ -22,6 +22,7 @@ LOG_LEVELS = ("debug", "info", "warning", "error", "critical")
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 0
 DEFAULT_LOG_LEVEL = "info"
+DEFAULT_WS_PING_INTERVAL = 15.0
 MIN_TOKEN_LENGTH = 32
 _TOKEN_PATTERN = re.compile(r"[A-Za-z0-9_\-.~]+")  # safe in a header and a query string
 _TRUE = ("1", "true", "yes")
@@ -35,6 +36,8 @@ class Settings:
     token: str = field(default_factory=generate_token, repr=False)
     allowed_origins: tuple[str, ...] = ()
     unsafe_bind_any: bool = False
+    ws_ping_interval: float = DEFAULT_WS_PING_INTERVAL
+    shutdown_on_stdin_eof: bool = False
 
 
 class SettingsError(ValueError):
@@ -67,6 +70,18 @@ def _parse_token(raw: str, source: str) -> str:
     return raw
 
 
+def _parse_interval(raw: str, source: str) -> float:
+    try:
+        seconds = float(raw)
+    except ValueError:
+        raise SettingsError(
+            f"{source}: interval must be a number of seconds, got {raw!r}"
+        ) from None
+    if not 0 < seconds <= 3600:
+        raise SettingsError(f"{source}: interval must be > 0 and <= 3600 seconds, got {raw!r}")
+    return seconds
+
+
 def _parse_origins(raw: str) -> tuple[str, ...]:
     return tuple(origin.strip() for origin in raw.split(",") if origin.strip())
 
@@ -97,11 +112,23 @@ def build_parser() -> argparse.ArgumentParser:
         f"(env {ENV_PREFIX}ALLOWED_ORIGINS, comma-separated; default none).",
     )
     parser.add_argument(
+        "--ws-ping-interval",
+        help="Seconds between WebSocket pings "
+        f"(env {ENV_PREFIX}WS_PING_INTERVAL, default {DEFAULT_WS_PING_INTERVAL:g}).",
+    )
+    parser.add_argument(
         "--unsafe-bind-any",
         action="store_true",
         default=None,
         help=f"Development only: allow --host other than {DEFAULT_HOST} "
         f"(env {ENV_PREFIX}UNSAFE_BIND_ANY=1).",
+    )
+    parser.add_argument(
+        "--shutdown-on-stdin-eof",
+        action="store_true",
+        default=None,
+        help="Shut down gracefully when stdin is closed: how the desktop app stops its backend "
+        f"(env {ENV_PREFIX}SHUTDOWN_ON_STDIN_EOF=1).",
     )
     return parser
 
@@ -117,7 +144,9 @@ def load_settings(
     port = DEFAULT_PORT
     log_level = DEFAULT_LOG_LEVEL
     allowed_origins: tuple[str, ...] = ()
+    ws_ping_interval = DEFAULT_WS_PING_INTERVAL
     unsafe_bind_any = environ.get(f"{ENV_PREFIX}UNSAFE_BIND_ANY", "").lower() in _TRUE
+    shutdown_on_stdin_eof = environ.get(f"{ENV_PREFIX}SHUTDOWN_ON_STDIN_EOF", "").lower() in _TRUE
     token = (
         _parse_token(environ[f"{ENV_PREFIX}TOKEN"], f"{ENV_PREFIX}TOKEN")
         if f"{ENV_PREFIX}TOKEN" in environ
@@ -130,6 +159,10 @@ def load_settings(
         port = _parse_port(environ[f"{ENV_PREFIX}PORT"], f"{ENV_PREFIX}PORT")
     if f"{ENV_PREFIX}LOG_LEVEL" in environ:
         log_level = _parse_log_level(environ[f"{ENV_PREFIX}LOG_LEVEL"], f"{ENV_PREFIX}LOG_LEVEL")
+    if f"{ENV_PREFIX}WS_PING_INTERVAL" in environ:
+        ws_ping_interval = _parse_interval(
+            environ[f"{ENV_PREFIX}WS_PING_INTERVAL"], f"{ENV_PREFIX}WS_PING_INTERVAL"
+        )
     if f"{ENV_PREFIX}ALLOWED_ORIGINS" in environ:
         allowed_origins = _parse_origins(environ[f"{ENV_PREFIX}ALLOWED_ORIGINS"])
 
@@ -141,8 +174,12 @@ def load_settings(
         log_level = _parse_log_level(args.log_level, "--log-level")
     if args.allowed_origin is not None:
         allowed_origins = tuple(args.allowed_origin)
+    if args.ws_ping_interval is not None:
+        ws_ping_interval = _parse_interval(args.ws_ping_interval, "--ws-ping-interval")
     if args.unsafe_bind_any is not None:
         unsafe_bind_any = True
+    if args.shutdown_on_stdin_eof is not None:
+        shutdown_on_stdin_eof = True
 
     if host != DEFAULT_HOST and not unsafe_bind_any:
         raise SettingsError(
@@ -157,4 +194,6 @@ def load_settings(
         token=token,
         allowed_origins=allowed_origins,
         unsafe_bind_any=unsafe_bind_any,
+        ws_ping_interval=ws_ping_interval,
+        shutdown_on_stdin_eof=shutdown_on_stdin_eof,
     )

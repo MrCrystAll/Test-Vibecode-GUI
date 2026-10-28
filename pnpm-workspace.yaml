@@ -2,8 +2,10 @@ packages:
   - apps/desktop
   - apps/ui
   - packages/contract
+  - tests/e2e
 allowBuilds:
   '@parcel/watcher': false
+  electron: true
   esbuild: true
   lmdb: false
   msgpackr-extract: false

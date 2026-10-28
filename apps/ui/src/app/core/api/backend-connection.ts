@@ -9,10 +9,35 @@ export interface BackendConnection {
   token: string | null;
 }
 
-/** What Electron's preload script exposes through `contextBridge` (TC-23). */
-export interface StudioBridge {
-  getBackendConnection(): Promise<{ baseUrl: string; wsUrl: string; token: string }>;
+/** Why the desktop shell could not start the backend (apps/desktop/src/startup.ts). */
+export type StartupFailureReason = 'spawn-error' | 'exited' | 'bad-handshake' | 'timeout';
+
+/**
+ * Backend lifecycle as the desktop shell reports it; never contains the token. `failed`: it never became ready;
+ * `stopped`: it died after being ready (TC-24).
+ */
+export interface ShellStartupState {
+  phase: 'starting' | 'waiting-health' | 'ready' | 'failed' | 'stopped';
+  reason?: StartupFailureReason;
 }
+
+/** What Electron's preload script exposes through `contextBridge` (apps/desktop/src/preload.ts, TC-23). */
+export interface StudioBridge {
+  /** Resolves once the backend is ready; rejects while it is not. */
+  getBackendConnection(): Promise<{ baseUrl: string; wsUrl: string; token: string }>;
+  getStartupState(): Promise<ShellStartupState>;
+  /** Calls `listener` on every change; returns an unsubscribe function. */
+  onStartupState(listener: (state: ShellStartupState) => void): () => void;
+  /** Starts a new backend after a failure or a crash (new port and token). */
+  retryBackend(): Promise<void>;
+  quit(): Promise<void>;
+}
+
+/** The preload bridge, or null in a plain browser (`ng serve`). */
+export const STUDIO_BRIDGE = new InjectionToken<StudioBridge | null>('STUDIO_BRIDGE', {
+  providedIn: 'root',
+  factory: () => window.studio ?? null,
+});
 
 declare global {
   interface Window {
