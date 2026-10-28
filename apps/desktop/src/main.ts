@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Electron main process (TC-23): one window, one backend child process, nothing else.
+// Electron main process (TC-23, TC-24): one window, one backend child process, one instance, nothing else.
 // Business logic lives in the backend; the UI (Angular) shows the splash and startup errors.
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -10,6 +10,8 @@ import { BackendSupervisor } from './backend';
 import { parseLaunchConfig, repoRootFrom } from './config';
 import { IPC, type BackendConnection } from './ipc';
 import { openLogs } from './logs';
+import { cleanUpOrphans, pidFilePath } from './pid-file';
+import { commandLineOf, isAlive, killTree } from './process-tree';
 import { publicState, type StartupState } from './startup';
 import { UI_ORIGIN, UI_SCHEME, resolveUiFile } from './ui-files';
 
@@ -24,6 +26,12 @@ const uiOrigin = config.uiUrl ? new URL(config.uiUrl).origin : UI_ORIGIN;
 if (config.userDataDir) {
   app.setPath('userData', path.resolve(config.userDataDir));
 }
+// One instance per profile (TC-24 AC3). Taken after --user-data-dir is applied, so e2e tests with their own
+// profiles never collide. A second launch hands over to the first one, which focuses its window.
+const isPrimaryInstance = app.requestSingleInstanceLock();
+if (!isPrimaryInstance) {
+  app.exit(0); // exits once this tick ends: nothing below starts a window or a backend (see the `ready` guard)
+}
 if (config.noSandbox) {
   app.commandLine.appendSwitch('no-sandbox');
 }
@@ -35,7 +43,10 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 const logs = openLogs(app.getPath('userData'));
-logs.log(`app starting: userData=${app.getPath('userData')} ui=${uiUrl}`);
+const pidFile = pidFilePath(app.getPath('userData'));
+if (isPrimaryInstance) {
+  logs.log(`app starting: userData=${app.getPath('userData')} ui=${uiUrl}`);
+}
 
 const backend = new BackendSupervisor({
   command: config.backendCommand,
@@ -44,6 +55,7 @@ const backend = new BackendSupervisor({
   startupTimeoutMs: config.startupTimeoutMs,
   backendLog: logs.backend,
   log: logs.log,
+  pidFile,
 });
 
 // --- IPC (the preload's typed API) -----------------------------------------------------------------
@@ -89,6 +101,19 @@ function createWindow(): BrowserWindow {
   return window;
 }
 
+let mainWindow: BrowserWindow | null = null;
+
+app.on('second-instance', () => {
+  logs.log('second launch: focusing the existing window');
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+    mainWindow.show();
+    mainWindow.focus();
+  }
+});
+
 app.on('window-all-closed', () => app.quit());
 
 // Quit = stop the backend's whole tree first, then exit. `app.exit` (not a second `app.quit`) because a
@@ -109,15 +134,23 @@ app.on('before-quit', (event) => {
 });
 
 void app.whenReady().then(() => {
+  if (!isPrimaryInstance) {
+    return;
+  }
   protocol.handle(UI_SCHEME, (request) => {
     const file = resolveUiFile(uiRoot, request.url);
     return file ? net.fetch(pathToFileURL(file).toString()) : new Response('Not found', { status: 404 });
   });
   const window = createWindow();
+  mainWindow = window;
   backend.onChange((state) => {
     if (!window.isDestroyed()) {
       window.webContents.send(IPC.startupState, publicState(state));
     }
   });
-  backend.start();
+  // A backend left by a run that was killed (TC-24 AC4), recorded in the PID file. Usually it is already gone:
+  // its stdin closed when that run died.
+  void cleanUpOrphans(pidFile, { isAlive, commandLineOf, killTree, log: logs.log })
+    .catch((error: unknown) => logs.log(`orphan check failed: ${String(error)}`))
+    .finally(() => backend.start());
 });

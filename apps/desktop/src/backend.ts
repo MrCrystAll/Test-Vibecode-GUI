@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
-// Starts the backend, reads its handshake, waits for health and feeds the startup state machine.
-// No business logic: the backend owns everything; this only supervises the child process.
+// Starts the backend, reads its handshake, waits for health and feeds the lifecycle state machine; stops it
+// gracefully, then by force (TC-24). No business logic: the backend owns everything; this only supervises it.
 import { type ChildProcess, spawn } from 'node:child_process';
 import type { Writable } from 'node:stream';
 import { createInterface } from 'node:readline';
 
 import { parseHandshake } from './handshake';
 import { waitForHealth } from './health';
-import { killTree } from './process-tree';
+import { removePidFile, writePidFile } from './pid-file';
+import { killTree, waitForExit } from './process-tree';
+import { DEFAULT_GRACEFUL_MS, stopBackend } from './shutdown';
 import { INITIAL_STATE, type StartupEvent, type StartupState, nextState } from './startup';
 
 export interface BackendOptions {
@@ -19,6 +21,10 @@ export interface BackendOptions {
   /** Receives the backend's stderr and any stdout after the handshake (`<userData>/logs/backend.log`). */
   backendLog: Writable;
   log: (message: string) => void;
+  /** `<userData>/backend.pid` (see pid-file.ts), or null to keep none (tests). */
+  pidFile: string | null;
+  /** How long a stop waits for the graceful shutdown before killing (default 5 s). */
+  gracefulMs?: number;
 }
 
 export class BackendSupervisor {
@@ -44,13 +50,16 @@ export class BackendSupervisor {
     this.options.log(`backend starting: ${this.options.command.join(' ')}`);
     const child = spawn(command, args, {
       cwd: this.options.cwd,
-      env: { ...process.env, ...this.options.env },
-      stdio: ['ignore', 'pipe', 'pipe'],
+      // The backend stops gracefully when its stdin closes: on stop, or when this process dies (TC-24).
+      env: { ...process.env, ...this.options.env, STUDIO_BACKEND_SHUTDOWN_ON_STDIN_EOF: '1' },
+      stdio: ['pipe', 'pipe', 'pipe'],
       // POSIX: own process group, so the whole tree can be killed at once (see process-tree.ts).
       detached: process.platform !== 'win32',
       windowsHide: true,
     });
     this.child = child;
+    child.stdin?.on('error', () => undefined); // EPIPE once the backend is gone: nothing to do
+    this.recordPids(child, null);
 
     child.on('error', (error) => this.dispatch(child, { type: 'spawn-error', detail: error.message }));
     child.on('exit', (code, signal) => {
@@ -76,6 +85,7 @@ export class BackendSupervisor {
       }
       const { port, pid } = result.handshake;
       this.options.log(`backend started pid=${pid} port=${port}`); // never the token
+      this.recordPids(child, pid);
       this.dispatch(child, { type: 'handshake', handshake: result.handshake });
       void this.awaitHealth(child, port, startedAt + this.options.startupTimeoutMs);
     });
@@ -86,18 +96,38 @@ export class BackendSupervisor {
     );
   }
 
-  /** Stops the backend's whole process tree. Safe to call at any time. */
+  /**
+   * Stops the backend: closes its stdin (graceful shutdown), then kills the whole tree if it is still running after
+   * `gracefulMs`, then checks the serving PID is gone. Safe to call at any time.
+   */
   async stop(): Promise<void> {
-    // Capture both PIDs before the first await: the state may change while killing.
+    // Capture everything before the first await: the state may change while stopping. Clearing `this.child` first
+    // means the exit this causes is not reported as a crash.
     const child = this.child;
     const servingPid = this.servingPid();
     this.child = null;
     this.clearTimer();
-    await killProcesses(child, servingPid);
+    const spawnedPid = child && isRunning(child) ? (child.pid ?? null) : null;
+    const outcome = await stopBackend(
+      { spawnedPid, servingPid },
+      {
+        closeStdin: () => child?.stdin?.end(),
+        waitForExit: (pids, timeoutMs) => waitForExit(pids, timeoutMs),
+        killTree: (pid) => killTree(pid),
+      },
+      this.options.gracefulMs ?? DEFAULT_GRACEFUL_MS,
+    );
+    if (spawnedPid !== null || servingPid !== null) {
+      this.options.log(`backend stop: ${outcome} (spawned=${spawnedPid ?? '-'} serving=${servingPid ?? '-'})`);
+    }
+    if (outcome !== 'survived' && this.options.pidFile) {
+      removePidFile(this.options.pidFile);
+    }
   }
 
+  /** Starts a new backend after a startup failure or a crash: a new process, so a new port and token. */
   async retry(): Promise<void> {
-    if (this.state.phase !== 'failed') {
+    if (this.state.phase !== 'failed' && this.state.phase !== 'stopped') {
       return;
     }
     await this.stop();
@@ -127,11 +157,16 @@ export class BackendSupervisor {
     if (next.phase === 'ready' || next.phase === 'failed') {
       this.clearTimer();
     }
-    if (next.phase === 'failed') {
-      this.options.log(`backend startup failed: ${next.reason}: ${next.detail}`);
-      // Kill whatever this attempt left running. `this.child` stays set, so this attempt's late
-      // events still reach the state machine, which ignores them once failed.
-      void killProcesses(child, this.servingPid());
+    if (next.phase === 'failed' || next.phase === 'stopped') {
+      this.options.log(
+        next.phase === 'failed'
+          ? `backend startup failed: ${next.reason}: ${next.detail}`
+          : `backend stopped unexpectedly: ${next.detail}`,
+      );
+      // Kill whatever this attempt left running (after a crash of uv, python may still serve). `this.child` stays
+      // set, so this attempt's late events still reach the state machine, which ignores them from now on.
+      const pidFile = this.options.pidFile;
+      void killProcesses(child, this.servingPid()).then(() => pidFile && removePidFile(pidFile));
     }
     this.setState(next);
   }
@@ -139,6 +174,12 @@ export class BackendSupervisor {
   private servingPid(): number | null {
     const state = this.state;
     return state.phase === 'waiting-health' || state.phase === 'ready' ? state.handshake.pid : null;
+  }
+
+  private recordPids(child: ChildProcess, servingPid: number | null): void {
+    if (this.options.pidFile && child.pid !== undefined) {
+      writePidFile(this.options.pidFile, { spawnedPid: child.pid, servingPid });
+    }
   }
 
   private setState(state: StartupState): void {
@@ -158,10 +199,14 @@ export class BackendSupervisor {
 
 /** Kills the spawned tree, then the serving python by its handshake PID (it may sit outside that tree). */
 async function killProcesses(child: ChildProcess | null, servingPid: number | null): Promise<void> {
-  if (child?.pid !== undefined && child.exitCode === null && child.signalCode === null) {
+  if (child?.pid !== undefined && isRunning(child)) {
     await killTree(child.pid);
   }
   if (servingPid !== null) {
     await killTree(servingPid);
   }
+}
+
+function isRunning(child: ChildProcess): boolean {
+  return child.exitCode === null && child.signalCode === null;
 }

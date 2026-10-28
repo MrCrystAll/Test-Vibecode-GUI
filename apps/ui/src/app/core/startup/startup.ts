@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // What the app shows before the backend is usable (TC-23 AC3): a splash while the desktop shell starts the
-// backend, an error with Retry / Quit if it fails, then the app. In a plain browser there is no shell, so the
-// app connects with the dev config and shows itself straight away.
+// backend, an error with Retry / Quit if it fails, then the app. If the backend dies later, the app stays on
+// screen with a "backend stopped" banner, and Restart goes through the splash again: the new backend has a new
+// port and token, so the client is rebuilt and the pages load afresh (TC-24 AC2). In a plain browser there is
+// no shell, so the app connects with the dev config and shows itself straight away.
 import {
   EnvironmentProviders,
   Injectable,
@@ -17,7 +19,7 @@ import {
   type StartupFailureReason,
 } from '../api/backend-connection';
 
-export type StartupPhase = 'starting' | 'ready' | 'failed';
+export type StartupPhase = 'starting' | 'ready' | 'failed' | 'stopped';
 
 @Injectable({ providedIn: 'root' })
 export class Startup {
@@ -41,6 +43,7 @@ export class Startup {
     void this.bridge.getStartupState().then((state) => this.apply(state));
   }
 
+  /** Retry after a startup failure, or Restart after a crash. */
   retry(): void {
     this.reasonSignal.set(null);
     this.phaseSignal.set('starting');
@@ -55,6 +58,10 @@ export class Startup {
     if (state.phase === 'failed') {
       this.reasonSignal.set(state.reason ?? null);
       this.phaseSignal.set('failed');
+      return;
+    }
+    if (state.phase === 'stopped') {
+      this.phaseSignal.set('stopped');
       return;
     }
     if (state.phase !== 'ready') {

@@ -32,13 +32,34 @@ describe('startup state machine', () => {
   it.each<StartupEvent[]>([
     [],
     [{ type: 'handshake', handshake: HANDSHAKE }],
-    [{ type: 'handshake', handshake: HANDSHAKE }, { type: 'health-ok' }],
-  ])('fails when the backend exits (after %j)', (...before) => {
+  ])('fails when the backend exits before it is ready (after %j)', (...before) => {
     expect(run([...before, { type: 'exited', code: 1, signal: null }])).toEqual({
       phase: 'failed',
       reason: 'exited',
       detail: 'backend exited with code 1',
     });
+  });
+
+  it('is stopped (not failed) when the backend dies after being ready', () => {
+    const ready = run([{ type: 'handshake', handshake: HANDSHAKE }, { type: 'health-ok' }]);
+
+    const stopped = nextState(ready, { type: 'exited', code: 3221225786, signal: null });
+
+    expect(stopped).toEqual({ phase: 'stopped', detail: 'backend exited with code 3221225786' });
+    expect(publicState(stopped)).toEqual({ phase: 'stopped' });
+    expect(nextState(stopped, { type: 'exited', code: null, signal: 'SIGKILL' })).toBe(stopped);
+    expect(nextState(stopped, { type: 'timeout', afterMs: 1 })).toBe(stopped);
+    expect(nextState(stopped, { type: 'spawn-error', detail: 'late' })).toBe(stopped);
+  });
+
+  it('restarts from stopped, back to starting', () => {
+    const stopped = run([
+      { type: 'handshake', handshake: HANDSHAKE },
+      { type: 'health-ok' },
+      { type: 'exited', code: 1, signal: null },
+    ]);
+
+    expect(nextState(stopped, { type: 'retry' })).toEqual(INITIAL_STATE);
   });
 
   it('times out while starting or waiting for health, but not once ready', () => {
@@ -65,7 +86,7 @@ describe('startup state machine', () => {
     expect(nextState(waiting, { type: 'handshake', handshake: { ...HANDSHAKE, port: 1 } })).toBe(waiting);
   });
 
-  it('retries only from failed, back to starting', () => {
+  it('retries only from failed or stopped, back to starting', () => {
     expect(nextState(INITIAL_STATE, { type: 'retry' })).toBe(INITIAL_STATE);
     expect(run([{ type: 'timeout', afterMs: 1 }, { type: 'retry' }])).toEqual(INITIAL_STATE);
   });

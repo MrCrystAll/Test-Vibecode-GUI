@@ -3,6 +3,7 @@
 
 import io
 import json
+import os
 import queue
 import subprocess
 import sys
@@ -13,15 +14,16 @@ import httpx
 import pytest
 from websockets.sync.client import connect as ws_connect
 
-from studio_backend.server import announce
+from studio_backend.server import announce, watch_stdin
 
 STARTUP_TIMEOUT_S = 30
 
 
 class BackendProcess:
-    def __init__(self, *args: str) -> None:
+    def __init__(self, *args: str, stdin: int | None = None) -> None:
         self.process = subprocess.Popen(
             [sys.executable, "-m", "studio_backend", *args],
+            stdin=stdin,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -156,3 +158,37 @@ def test_announce_writes_one_compact_json_line() -> None:
     announce({"event": "listening", "port": 1234}, stream=stream)
 
     assert stream.getvalue() == '{"event":"listening","port":1234}\n'
+
+
+def test_closing_stdin_stops_the_backend_gracefully() -> None:
+    backend = BackendProcess("--port", "0", "--shutdown-on-stdin-eof", stdin=subprocess.PIPE)
+    try:
+        json.loads(backend.first_stdout_line())
+        assert backend.process.stdin is not None
+        backend.process.stdin.close()
+
+        assert backend.process.wait(timeout=STARTUP_TIMEOUT_S) == 0
+    finally:
+        if backend.process.poll() is None:
+            backend.stop()
+    assert any("stdin closed" in line for line in backend.stderr_lines())
+
+
+class _FakeServer:
+    should_exit = False
+
+
+def test_watch_stdin_asks_the_server_to_exit_at_end_of_file() -> None:
+    read_fd, write_fd = os.pipe()
+    server = _FakeServer()
+    with os.fdopen(read_fd, "rb") as stream:
+        thread = watch_stdin(server, stream)
+        os.write(write_fd, b"ignored")
+        thread.join(timeout=0.2)
+        assert thread.is_alive() and not server.should_exit  # data alone changes nothing
+
+        os.close(write_fd)
+        thread.join(timeout=5)
+
+    assert not thread.is_alive()
+    assert server.should_exit

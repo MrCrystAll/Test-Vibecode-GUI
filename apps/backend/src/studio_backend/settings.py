@@ -37,6 +37,7 @@ class Settings:
     allowed_origins: tuple[str, ...] = ()
     unsafe_bind_any: bool = False
     ws_ping_interval: float = DEFAULT_WS_PING_INTERVAL
+    shutdown_on_stdin_eof: bool = False
 
 
 class SettingsError(ValueError):
@@ -122,6 +123,13 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"Development only: allow --host other than {DEFAULT_HOST} "
         f"(env {ENV_PREFIX}UNSAFE_BIND_ANY=1).",
     )
+    parser.add_argument(
+        "--shutdown-on-stdin-eof",
+        action="store_true",
+        default=None,
+        help="Shut down gracefully when stdin is closed: how the desktop app stops its backend "
+        f"(env {ENV_PREFIX}SHUTDOWN_ON_STDIN_EOF=1).",
+    )
     return parser
 
 
@@ -138,6 +146,7 @@ def load_settings(
     allowed_origins: tuple[str, ...] = ()
     ws_ping_interval = DEFAULT_WS_PING_INTERVAL
     unsafe_bind_any = environ.get(f"{ENV_PREFIX}UNSAFE_BIND_ANY", "").lower() in _TRUE
+    shutdown_on_stdin_eof = environ.get(f"{ENV_PREFIX}SHUTDOWN_ON_STDIN_EOF", "").lower() in _TRUE
     token = (
         _parse_token(environ[f"{ENV_PREFIX}TOKEN"], f"{ENV_PREFIX}TOKEN")
         if f"{ENV_PREFIX}TOKEN" in environ
@@ -169,6 +178,8 @@ def load_settings(
         ws_ping_interval = _parse_interval(args.ws_ping_interval, "--ws-ping-interval")
     if args.unsafe_bind_any is not None:
         unsafe_bind_any = True
+    if args.shutdown_on_stdin_eof is not None:
+        shutdown_on_stdin_eof = True
 
     if host != DEFAULT_HOST and not unsafe_bind_any:
         raise SettingsError(
@@ -184,4 +195,5 @@ def load_settings(
         allowed_origins=allowed_origins,
         unsafe_bind_any=unsafe_bind_any,
         ws_ping_interval=ws_ping_interval,
+        shutdown_on_stdin_eof=shutdown_on_stdin_eof,
     )
