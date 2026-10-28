@@ -139,6 +139,19 @@ class MainTest(unittest.TestCase):
 
         self.assertTrue(members["studio-api-tests"].has_tests)
 
+    def test_e2e_is_a_known_step_but_not_part_of_all(self) -> None:
+        self.assertIn("e2e", run.STEP_FUNCTIONS)
+        self.assertNotIn("e2e", run.STEPS)
+        self.assertEqual(run.EXPLICIT_STEPS, ("e2e",))
+
+    def test_e2e_runs_the_e2e_package_script(self) -> None:
+        runner = _RecordingRunner()
+
+        run.step_e2e(runner)
+
+        self.assertEqual(len(runner.commands), 1)
+        self.assertEqual(runner.commands[0][-4:], ["--filter", "@studio/e2e", "run", "e2e"])
+
     def test_hook_scripts_live_in_the_repository(self) -> None:
         for name, relative, _args in run.HOOKS:
             with self.subTest(name):

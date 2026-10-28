@@ -81,3 +81,66 @@ jobs:
           path: .ci-tmp/pytest/**/*.log
           if-no-files-found: ignore
           retention-days: 14
+
+  # TC-29: the QA end-to-end suite launches the real desktop app (Playwright drives Electron). It needs the built
+  # UI and shell, and a display: Linux gets one from xvfb. Kept apart from `checks` so a slow or flaky UI run
+  # never hides the fast results; its traces, screenshots and logs are uploaded when it fails.
+  e2e:
+    name: e2e (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      CI_RUN: uv run --no-project python tools/ci/run.py
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv (Python from .python-version)
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up pnpm (version from package.json packageManager)
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js (version from .nvmrc)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: $CI_RUN install
+
+      - name: Build the UI and the desktop shell
+        run: $CI_RUN build
+
+      - name: End-to-end tests (Windows)
+        if: runner.os == 'Windows'
+        run: $CI_RUN e2e
+
+      # Chromium's sandbox needs a SUID helper that CI containers lack; the flag only affects the Electron
+      # process under test, the renderer stays sandboxed (apps/desktop/README.md).
+      - name: End-to-end tests (Linux, under xvfb)
+        if: runner.os == 'Linux'
+        env:
+          STUDIO_E2E_NO_SANDBOX: '1'
+        run: xvfb-run --auto-servernum $CI_RUN e2e
+
+      - name: Upload e2e report and logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report-${{ matrix.os }}
+          path: |
+            tests/e2e/test-results
+            tests/e2e/playwright-report
+          if-no-files-found: ignore
+          retention-days: 14
