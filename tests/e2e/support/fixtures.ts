@@ -41,4 +41,4 @@ export function fakeBackendCommand(mode: FakeBackendMode, pidFile: string): stri
   return JSON.stringify([process.execPath, script, '--mode', mode, '--pid-file', pidFile]);
 }
 
-export type FakeBackendMode = 'exit' | 'hang' | 'noise' | 'wrong-json';
+export type FakeBackendMode = 'exit' | 'hang' | 'noise' | 'wrong-json' | 'stubborn';
