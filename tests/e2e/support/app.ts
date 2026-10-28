@@ -10,17 +10,19 @@ import os from 'node:os';
 import path from 'node:path';
 
 export const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
-const DESKTOP_DIR = path.join(REPO_ROOT, 'apps', 'desktop');
+export const DESKTOP_DIR = path.join(REPO_ROOT, 'apps', 'desktop');
 const UI_INDEX = path.join(REPO_ROOT, 'apps', 'ui', 'dist', 'ui', 'browser', 'index.html');
 const DESKTOP_MAIN = path.join(DESKTOP_DIR, 'dist', 'main.js');
 
 // The `electron` package exports the path of its binary (its types describe the in-app API instead).
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const electronBinary: string = require('electron');
+export const electronBinary: string = require('electron');
 
 export interface LaunchOptions {
   /** Extra environment variables for the app (e.g. STUDIO_BACKEND_CMD, STUDIO_BACKEND_STARTUP_TIMEOUT_MS). */
   env?: Record<string, string>;
+  /** Reuse this user-data folder (a restart of the same profile) instead of creating a fresh one. */
+  userData?: string;
 }
 
 /** What the shell writes to `main.log` once the backend is up: `backend started pid=<n> port=<m>`. */
@@ -49,7 +51,7 @@ export class StudioApp {
         throw new Error(`${required} is missing: run \`pnpm build\` first (the UI and the desktop shell)`);
       }
     }
-    const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'studio e2é '));
+    const userData = options.userData ?? fs.mkdtempSync(path.join(os.tmpdir(), 'studio e2é '));
     const env: Record<string, string> = {};
     for (const [key, value] of Object.entries(process.env)) {
       if (value !== undefined) {
@@ -81,9 +83,10 @@ export class StudioApp {
     }
   }
 
-  /** The serving python's pid and port, once `main.log` says the backend started. */
+  /** The latest serving python's pid and port, once `main.log` says the backend started. */
   backendInfo(): BackendInfo | null {
-    const match = /backend started pid=(\d+) port=(\d+)/.exec(this.readLog('main.log'));
+    const matches = [...this.readLog('main.log').matchAll(/backend started pid=(\d+) port=(\d+)/g)];
+    const match = matches[matches.length - 1]; // the latest one: a restart starts a new backend
     return match ? { pid: Number(match[1]), port: Number(match[2]) } : null;
   }
 
