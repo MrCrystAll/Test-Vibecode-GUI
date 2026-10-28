@@ -12,6 +12,7 @@ from collections.abc import Iterator
 
 import httpx
 import pytest
+from websockets.sync.client import connect as ws_connect
 
 from studio_backend.server import announce, watch_stdin
 
@@ -82,6 +83,35 @@ def test_port_zero_announces_the_bound_port_as_first_stdout_line(
     assert httpx.get(f"{base}/api/version", timeout=5).status_code == 401
     authorized = {"Authorization": f"Bearer {event['token']}"}
     assert httpx.get(f"{base}/api/version", headers=authorized, timeout=5).status_code == 200
+
+
+def test_real_server_speaks_websocket_on_ws() -> None:
+    """/ws over a real socket, not Starlette's in-process TestClient (DEV-B's finding on TC-20).
+
+    Fails if uvicorn has no WebSocket implementation installed.
+    """
+    process = BackendProcess("--port", "0", "--ws-ping-interval", "0.1")
+    try:
+        event = json.loads(process.first_stdout_line())
+        url = f"ws://127.0.0.1:{event['port']}/ws"
+        subprotocols = ["studio.v1", f"bearer.{event['token']}"]
+        with ws_connect(url, subprotocols=subprotocols, open_timeout=5) as ws:  # type: ignore[arg-type]
+            assert ws.subprotocol == "studio.v1"
+            assert json.loads(ws.recv(timeout=5))["type"] == "ping"  # server ping
+            client_ping = {
+                "type": "ping",
+                "version": 1,
+                "id": "c-1",
+                "ts": "2026-10-28T10:00:00Z",
+                "payload": {},
+            }
+            ws.send(json.dumps(client_ping))
+            replies = [json.loads(ws.recv(timeout=5)) for _ in range(3)]
+        assert {"type": "pong", "reply_to": "c-1"} in [
+            {"type": r["type"], "reply_to": r["payload"].get("reply_to")} for r in replies
+        ]
+    finally:
+        process.stop()
 
 
 def test_stderr_carries_json_logs_without_the_token(backend: BackendProcess) -> None:

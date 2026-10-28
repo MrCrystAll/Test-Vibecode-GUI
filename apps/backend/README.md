@@ -29,6 +29,7 @@ uv run --package studio-backend python -m studio_backend --port 0
 | Log level (`debug`, `info`, `warning`, `error`, `critical`) | `--log-level` | `STUDIO_BACKEND_LOG_LEVEL` | `info` |
 | API token (≥ 32 chars of `A-Z a-z 0-9 - _ . ~`); **env only**, command lines are visible to other users | — | `STUDIO_BACKEND_TOKEN` | random, 256 bits, per launch |
 | Browser origins allowed to call the API (e.g. `http://localhost:4200` for `ng serve`) | `--allowed-origin` (repeatable) | `STUDIO_BACKEND_ALLOWED_ORIGINS` (comma-separated) | none |
+| Seconds between server `ping` messages on `/ws` (0 < s ≤ 3600) | `--ws-ping-interval` | `STUDIO_BACKEND_WS_PING_INTERVAL` | `15` |
 | Development only: allow a non-loopback `--host` (logs a warning) | `--unsafe-bind-any` | `STUDIO_BACKEND_UNSAFE_BIND_ANY=1` | off |
 | Shut down gracefully when stdin is closed (how the desktop app stops the backend, TC-24) | `--shutdown-on-stdin-eof` | `STUDIO_BACKEND_SHUTDOWN_ON_STDIN_EOF=1` | off |
 
@@ -67,11 +68,38 @@ Only the client that launched the backend can drive it:
      one; Electron's main process, the CLI and tests send none.
   3. Every route except `GET /api/health` (including unknown routes and `/openapi.json`) needs
      `Authorization: Bearer <token>` → `401 unauthorized` with `WWW-Authenticate: Bearer`.
-- WebSockets: the same checks on the handshake. Browsers cannot set headers on a WebSocket, so the token may also be
-  passed as `?token=<token>` (WebSocket only, never accepted over HTTP). A refused handshake is closed with code
-  `1008` before `accept` (seen as HTTP 403 by the client).
+- WebSockets: the same checks on the handshake. Browsers cannot set headers on a WebSocket, so the token is offered
+  as the subprotocol `bearer.<token>` next to `studio.v1` (ADR-0006); `Authorization: Bearer` also works for
+  non-browser clients. The token is **never** accepted in a URL. A refused handshake is closed with code `1008` before
+  `accept` (seen as HTTP 403 by the client).
 - CORS: allowed origins get CORS headers for `Authorization` and `Content-Type`; preflights carry no token by design
   and are answered without one.
+
+### WebSocket `/ws` (TC-20)
+One authenticated endpoint; later live events (run status, logs, metrics) plug into it.
+
+```js
+new WebSocket(`ws://127.0.0.1:${port}/ws`, ["studio.v1", `bearer.${token}`]); // server echoes "studio.v1"
+```
+
+Every message, in both directions, is one JSON text frame with **all** of these keys:
+`{"type": str, "version": 1, "id": str, "ts": ISO-8601 UTC, "payload": object}`. The models are published in
+`packages/contract/openapi.json` (`components.schemas`: `WsClientMessage`, `WsServerMessage` and one schema per
+message), so the UI gets them from the same generator as the HTTP client.
+
+| Direction | `type` | `payload` | Notes |
+|---|---|---|---|
+| server → client | `ping` | `{}` | every `--ws-ping-interval` seconds |
+| client → server | `ping` | `{}` | answered with `pong` |
+| server → client | `pong` | `{"reply_to": id}` | |
+| client → server | `pong` | `{"reply_to": id?}` | accepted, no answer |
+| client → server | `subscribe` / `unsubscribe` | `{"topic": "system"}` | only `system` exists for now |
+| server → client | `subscribed` / `unsubscribed` | `{"topic", "reply_to"}` | |
+| server → client | `error` | `{"code", "message", "reply_to"?}` | the connection stays open |
+
+`error.code` is one of `invalid_json`, `invalid_envelope` (not an object, or an envelope key missing),
+`unsupported_version`, `unknown_type`, `unknown_topic`, `invalid_payload`. A connection without `studio.v1` is closed
+with `1008`.
 
 ### API (0.1.0)
 - `GET /api/health` → `200 {"status": "ok"}` (no token needed: liveness probe)

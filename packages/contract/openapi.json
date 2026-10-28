@@ -1,6 +1,12 @@
 {
   "components": {
     "schemas": {
+      "EmptyPayload": {
+        "additionalProperties": false,
+        "properties": {},
+        "title": "EmptyPayload",
+        "type": "object"
+      },
       "ErrorDetail": {
         "properties": {
           "code": {
@@ -20,6 +26,45 @@
           "message"
         ],
         "title": "ErrorDetail",
+        "type": "object"
+      },
+      "ErrorPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "enum": [
+              "invalid_json",
+              "invalid_envelope",
+              "unsupported_version",
+              "unknown_type",
+              "invalid_payload",
+              "unknown_topic"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "reply_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Reply To"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorPayload",
         "type": "object"
       },
       "ErrorResponse": {
@@ -49,6 +94,61 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "ReplyPayload": {
+        "additionalProperties": false,
+        "description": "Payload of a reply: the `id` of the client message it answers, if any.",
+        "properties": {
+          "reply_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Reply To"
+          }
+        },
+        "title": "ReplyPayload",
+        "type": "object"
+      },
+      "TopicPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "topic": {
+            "const": "system",
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic"
+        ],
+        "title": "TopicPayload",
+        "type": "object"
+      },
+      "TopicReplyPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "reply_to": {
+            "title": "Reply To",
+            "type": "string"
+          },
+          "topic": {
+            "const": "system",
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic",
+          "reply_to"
+        ],
+        "title": "TopicReplyPayload",
+        "type": "object"
+      },
       "VersionResponse": {
         "properties": {
           "api_version": {
@@ -65,6 +165,347 @@
           "api_version"
         ],
         "title": "VersionResponse",
+        "type": "object"
+      },
+      "WsClientMessage": {
+        "discriminator": {
+          "mapping": {
+            "ping": "#/components/schemas/WsPing",
+            "pong": "#/components/schemas/WsPong",
+            "subscribe": "#/components/schemas/WsSubscribe",
+            "unsubscribe": "#/components/schemas/WsUnsubscribe"
+          },
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/WsPing"
+          },
+          {
+            "$ref": "#/components/schemas/WsPong"
+          },
+          {
+            "$ref": "#/components/schemas/WsSubscribe"
+          },
+          {
+            "$ref": "#/components/schemas/WsUnsubscribe"
+          }
+        ]
+      },
+      "WsError": {
+        "additionalProperties": false,
+        "description": "Server: a client message was rejected. The connection stays open.",
+        "properties": {
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/ErrorPayload"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "error",
+            "default": "error",
+            "title": "Type",
+            "type": "string"
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "id",
+          "ts",
+          "type",
+          "payload"
+        ],
+        "title": "WsError",
+        "type": "object"
+      },
+      "WsPing": {
+        "additionalProperties": false,
+        "description": "Keep-alive. The server sends one every ping interval; a client may send one too.",
+        "properties": {
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/EmptyPayload"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "ping",
+            "default": "ping",
+            "title": "Type",
+            "type": "string"
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "id",
+          "ts",
+          "type",
+          "payload"
+        ],
+        "title": "WsPing",
+        "type": "object"
+      },
+      "WsPong": {
+        "additionalProperties": false,
+        "description": "Answer to a `ping`. The server's pong names the client ping in `payload.reply_to`.",
+        "properties": {
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/ReplyPayload"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "pong",
+            "default": "pong",
+            "title": "Type",
+            "type": "string"
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "id",
+          "ts",
+          "type",
+          "payload"
+        ],
+        "title": "WsPong",
+        "type": "object"
+      },
+      "WsServerMessage": {
+        "discriminator": {
+          "mapping": {
+            "error": "#/components/schemas/WsError",
+            "ping": "#/components/schemas/WsPing",
+            "pong": "#/components/schemas/WsPong",
+            "subscribed": "#/components/schemas/WsSubscribed",
+            "unsubscribed": "#/components/schemas/WsUnsubscribed"
+          },
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/WsPing"
+          },
+          {
+            "$ref": "#/components/schemas/WsPong"
+          },
+          {
+            "$ref": "#/components/schemas/WsSubscribed"
+          },
+          {
+            "$ref": "#/components/schemas/WsUnsubscribed"
+          },
+          {
+            "$ref": "#/components/schemas/WsError"
+          }
+        ]
+      },
+      "WsSubscribe": {
+        "additionalProperties": false,
+        "description": "Client: start receiving events of a topic.",
+        "properties": {
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/TopicPayload"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "subscribe",
+            "default": "subscribe",
+            "title": "Type",
+            "type": "string"
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "id",
+          "ts",
+          "type",
+          "payload"
+        ],
+        "title": "WsSubscribe",
+        "type": "object"
+      },
+      "WsSubscribed": {
+        "additionalProperties": false,
+        "description": "Server: the subscription in `payload.reply_to` is active.",
+        "properties": {
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/TopicReplyPayload"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "subscribed",
+            "default": "subscribed",
+            "title": "Type",
+            "type": "string"
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "id",
+          "ts",
+          "type",
+          "payload"
+        ],
+        "title": "WsSubscribed",
+        "type": "object"
+      },
+      "WsUnsubscribe": {
+        "additionalProperties": false,
+        "description": "Client: stop receiving events of a topic.",
+        "properties": {
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/TopicPayload"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "unsubscribe",
+            "default": "unsubscribe",
+            "title": "Type",
+            "type": "string"
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "id",
+          "ts",
+          "type",
+          "payload"
+        ],
+        "title": "WsUnsubscribe",
+        "type": "object"
+      },
+      "WsUnsubscribed": {
+        "additionalProperties": false,
+        "description": "Server: the topic is no longer delivered.",
+        "properties": {
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/TopicReplyPayload"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "unsubscribed",
+            "default": "unsubscribed",
+            "title": "Type",
+            "type": "string"
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "id",
+          "ts",
+          "type",
+          "payload"
+        ],
+        "title": "WsUnsubscribed",
         "type": "object"
       }
     }
