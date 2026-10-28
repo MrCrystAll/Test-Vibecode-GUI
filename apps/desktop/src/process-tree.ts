@@ -10,23 +10,26 @@ export interface KillPlan {
 }
 
 /**
- * How to kill the tree rooted at `pid` (the process we spawned). On POSIX the backend is spawned
- * `detached`, so it leads its own process group and `-pid` addresses the whole group.
+ * How to kill the tree rooted at `pid`. On POSIX the backend is spawned `detached`, so the PID we spawned leads its
+ * own process group and `-pid` addresses the whole group. Other PIDs (the serving python from the handshake, an
+ * orphan from the PID file) are not group leaders, so the process itself is signalled too.
  */
-export function killPlan(platform: NodeJS.Platform, pid: number): KillPlan | { signalGroup: number } {
+export function killPlan(platform: NodeJS.Platform, pid: number): KillPlan | { signals: number[] } {
   if (platform === 'win32') {
     return { command: 'taskkill', args: ['/PID', String(pid), '/T', '/F'] };
   }
-  return { signalGroup: -pid };
+  return { signals: [-pid, pid] };
 }
 
 export async function killTree(pid: number, platform: NodeJS.Platform = process.platform): Promise<void> {
   const plan = killPlan(platform, pid);
-  if ('signalGroup' in plan) {
-    try {
-      process.kill(plan.signalGroup, 'SIGKILL');
-    } catch {
-      // Already gone.
+  if ('signals' in plan) {
+    for (const target of plan.signals) {
+      try {
+        process.kill(target, 'SIGKILL');
+      } catch {
+        // No such group (not a leader) or already gone.
+      }
     }
     return;
   }

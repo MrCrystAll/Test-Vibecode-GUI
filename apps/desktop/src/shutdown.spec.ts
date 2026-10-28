@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -6,7 +7,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { type CleanupEffects, cleanUpOrphans, readPidFile, writePidFile } from './pid-file';
-import { waitForExit } from './process-tree';
+import { isAlive, killTree, waitForExit } from './process-tree';
 import { type StopEffects, stopBackend } from './shutdown';
 
 /** Records every effect in order; `exitsAfterSignal` says whether the backend honours the stdin signal. */
@@ -92,6 +93,19 @@ describe('waitForExit', () => {
 
   it('resolves false at the timeout', async () => {
     expect(await waitForExit([42], 200, { isAlive: () => true, intervalMs: 50, ...clock() })).toBe(false);
+  });
+});
+
+describe('killTree', () => {
+  it('kills a process that does not lead its own group, like the serving python (DEV-A, #32)', async () => {
+    const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore' });
+    const pid = child.pid as number;
+    const exited = new Promise((resolve) => child.once('exit', resolve));
+
+    await killTree(pid);
+    await exited;
+
+    expect(isAlive(pid)).toBe(false);
   });
 });
 
