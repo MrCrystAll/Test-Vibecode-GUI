@@ -42,6 +42,9 @@ carried several tickets (about 500K tokens) spends the shared plan's usage limit
 so the team gets less done before each limit reset.
 - A developer **checkpoints at each ticket boundary**: its ticket is To Review with CI green. It uses the checkpoint steps
   above, then tells the supervisor "checkpointed" with its PR numbers and head SHAs.
+- The supervisor then checks the session's context with `get_usage`. If it is above about 250K tokens, the supervisor
+  restarts it. Below that, a restart saves nothing, because a fresh session spends about 100K just loading its tools and
+  briefing; the session stays and is restarted at a later boundary.
 - The supervisor starts a **fresh session** for that role with the restart brief, then archives the old session. Only one
   session per role is live at a time, so the old one must have checkpointed first.
 - Right after the restart, the supervisor sends every peer the new session id. Messages sent to an archived session are
