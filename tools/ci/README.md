@@ -24,7 +24,7 @@ uv run --no-project python tools/ci/run.py lint typecheck test
 | `typecheck` | per uv member with `[tool.mypy]`: `mypy`; `pnpm -r --if-present run typecheck` |
 | `test` | `tools/ci` self-tests; per uv member with a `tests/` folder or `[tool.pytest.ini_options]`: `pytest --basetemp=.ci-tmp/pytest/<member>` (includes QA's `tests/api`); `pnpm -r --if-present run test` |
 | `build` | per uv member with `[build-system]`: `uv build` into `dist/python/`; `pnpm -r --if-present run build` |
-| `hooks` | `tools/ci/hooks/contract-drift.py` (TC-18), `tools/ci/hooks/import-boundaries.py` (TC-25), `tests/fixtures/workspaces/generate.py --check` (TC-42), each only once it exists |
+| `hooks` | `tools/ci/hooks/contract-drift.py` (TC-18), `tools/ci/hooks/import-boundaries.py` (TC-25), `tests/fixtures/workspaces/generate.py --check` (TC-42), `tools/ci/hooks/licenses.py` (TC-28), each only once it exists |
 
 A step keeps going after a failure and lists every failure at the end; the exit code is non-zero if anything failed.
 A check that is skipped (no tests, hook not written yet) prints a line saying so: nothing is skipped silently.
