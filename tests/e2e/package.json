@@ -1,0 +1,21 @@
+{
+  "name": "@studio/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "description": "QA end-to-end suite: Playwright drives the real Electron app (black-box).",
+  "license": "Apache-2.0",
+  "scripts": {
+    "e2e": "playwright test",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.64.0",
+    "@types/node": "24.19.2",
+    "electron": "45.0.0",
+    "eslint": "^10.13.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.72.0"
+  }
+}
