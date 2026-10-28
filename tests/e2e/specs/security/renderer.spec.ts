@@ -110,6 +110,8 @@ test('the token reaches the renderer only through the bridge and never the logs'
 
   // The shell's log and the backend's log live in the user-data folder, and neither contains the token.
   expect(studio.readLog('main.log')).toContain('backend started');
+  // The backend's stderr (its JSON log lines) really is written to backend.log (TC-23 AC4).
+  await expect.poll(() => studio.readLog('backend.log')).toMatch(/"level": ?"info"/);
   for (const name of ['main.log', 'backend.log'] as const) {
     expect(studio.readLog(name), `${name} must not contain the token`).not.toContain(connection.token);
   }
