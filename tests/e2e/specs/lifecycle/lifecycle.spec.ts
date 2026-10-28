@@ -103,8 +103,10 @@ test('a second launch with the same profile exits and focuses the first window',
     env: { ...process.env, ...(process.platform === 'linux' ? { STUDIO_E2E_NO_SANDBOX: '1' } : {}) },
     stdio: 'ignore',
   });
-  const exit = await new Promise<number | null>((resolve) => second.once('exit', resolve));
-  expect(exit).toBe(0);
+  const exit = await new Promise<string>((resolve) =>
+    second.once('exit', (code, signal) => resolve(`code=${String(code)} signal=${String(signal)}`)),
+  );
+  expect(exit).toBe('code=0 signal=null');
   await expect.poll(() => studio.readLog('main.log')).toContain('second launch: focusing the existing window');
   expect(studio.electronApp.windows()).toHaveLength(1);
   await expect(studio.window.getByTestId('nav-status')).toBeVisible();
