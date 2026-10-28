@@ -66,8 +66,8 @@ module.exports = tseslint.config(
           checkAttributes: true,
           requireDescription: false,
           requireMeaning: false,
-          // Test hooks for QA's e2e suite (TC-29), never shown to users.
-          ignoreAttributes: ['data-testid'],
+          // Never shown to users: e2e test hooks (TC-29) and ARIA references to element ids.
+          ignoreAttributes: ['data-testid', 'aria-labelledby', 'aria-describedby'],
         },
       ],
     },
