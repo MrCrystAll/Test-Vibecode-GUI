@@ -20,4 +20,5 @@ jobs:
         # Passed through the environment, never interpolated into the script (titles are untrusted input).
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
-        run: python3 tools/ci/pr_title.py "$PR_TITLE"
+          PR_BASE: ${{ github.event.pull_request.base.ref }}
+        run: python3 tools/ci/pr_title.py "$PR_TITLE" --base "$PR_BASE"

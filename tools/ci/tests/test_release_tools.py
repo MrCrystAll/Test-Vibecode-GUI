@@ -44,13 +44,35 @@ class PrTitleTest(unittest.TestCase):
             ("feat(ui): add run list (TC-0)", "expected"),
             ("Feat(ui): add run list (TC-12)", "expected"),
             ("feature(ui): add run list (TC-12)", "type 'feature'"),
-            ("docs(process): branch protection (TC-1)", "scope 'process'"),
+            ("docs(design): colour tokens (TC-1)", "scope 'design'"),
             ("feat(ui): add run list. (TC-12)", "period"),
         ):
             with self.subTest(title):
                 found = pr_title.problems(title)
                 self.assertTrue(found)
                 self.assertIn(reason, " ".join(found))
+
+    def test_ticketless_exemptions(self) -> None:
+        for title in (
+            "docs(process): branch protection on dev and main",
+            "docs(adr): ADR-0007 something",
+            "docs(product): roadmap risks (#21)",
+        ):
+            with self.subTest(title):
+                self.assertEqual(pr_title.problems(title), [])
+        self.assertEqual(pr_title.problems("release: v0.1.0", base="main"), [])
+
+    def test_exemptions_are_narrow(self) -> None:
+        for title, base in (
+            ("docs(docs): roadmap wording", "dev"),  # other docs scopes still need a key
+            ("docs(process): ends with a period.", "dev"),
+            ("feat(process): something", "dev"),
+            ("release: v0.1.0", "dev"),  # release titles only into main
+            ("release: 0.1.0", "main"),
+            ("feat(ui): no key into main", "main"),
+        ):
+            with self.subTest(title=title, base=base):
+                self.assertTrue(pr_title.problems(title, base))
 
     def test_main_exit_codes(self) -> None:
         with contextlib.redirect_stdout(io.StringIO()):
@@ -60,6 +82,8 @@ class PrTitleTest(unittest.TestCase):
         self.assertIn("workflow.md", err.getvalue())
         with contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(pr_title.main([]), 2)
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(pr_title.main(["release: v0.1.0", "--base", "main"]), 0)
 
 
 class NextTagTest(unittest.TestCase):

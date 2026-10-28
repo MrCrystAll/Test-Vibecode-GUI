@@ -1,10 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
 """Check a PR title, which becomes the squash-merge commit subject (TC-27, workflow.md "Commits").
 
-    uv run --no-project python tools/ci/pr_title.py "feat(ui): add run list (TC-12)"
+    uv run --no-project python tools/ci/pr_title.py "feat(ui): add run list (TC-12)" [--base dev]
 
 Rule: `<type>(<scope>)[!]: <summary> (TC-<n>)`, optionally followed by GitHub's ` (#<pr>)` when a
 squash-merge subject is checked. Exits 1 with the reasons when the title does not match.
+
+Exemptions from the ticket key (supervisor decision, workflow.md "Commits"):
+- process documents: `docs(process|adr|product): <summary>`;
+- release PRs into `main` (`--base main`): `release: v<X.Y.Z>`.
 Standard library only.
 """
 
@@ -33,10 +37,20 @@ _TITLE = re.compile(
     r" \((?P<ticket>TC-[1-9][0-9]*)\)(?: \(#[0-9]+\))?$"
 )
 EXAMPLE = "feat(ui): add run list (TC-12)"
+# Titles that need no ticket key.
+_PROCESS_DOCS = re.compile(r"^docs\((process|adr|product)\): (?P<summary>\S.*?)(?: \(#[0-9]+\))?$")
+_RELEASE = re.compile(
+    r"^release: v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?: \(#[0-9]+\))?$"
+)
 
 
-def problems(title: str) -> list[str]:
-    """Why `title` is not a valid PR title; empty when it is."""
+def problems(title: str, base: str = "dev") -> list[str]:
+    """Why `title` is not a valid PR title into `base`; empty when it is."""
+    if base == "main" and _RELEASE.match(title):
+        return []
+    exempt = _PROCESS_DOCS.match(title)
+    if exempt and not exempt["summary"].endswith("."):
+        return []
     match = _TITLE.match(title)
     if match is None:
         return [f"expected `type(scope): summary (TC-n)`, e.g. `{EXAMPLE}`"]
@@ -52,11 +66,16 @@ def problems(title: str) -> list[str]:
 
 
 def main(argv: Sequence[str]) -> int:
-    if len(argv) != 1:
-        print('usage: pr_title.py "<title>"', file=sys.stderr)
+    args = list(argv)
+    base = "dev"
+    if len(args) == 3 and args[1] == "--base":
+        base = args.pop(2)
+        args.pop(1)
+    if len(args) != 1:
+        print('usage: pr_title.py "<title>" [--base <branch>]', file=sys.stderr)
         return 2
-    title = argv[0]
-    found = problems(title)
+    title = args[0]
+    found = problems(title, base)
     if found:
         print(f"PR title {title!r} is not a Conventional Commit for this repo:", file=sys.stderr)
         for problem in found:
