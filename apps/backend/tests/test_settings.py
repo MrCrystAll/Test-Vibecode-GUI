@@ -12,6 +12,7 @@ def test_defaults_bind_localhost_on_any_free_port() -> None:
     assert settings == Settings(host="127.0.0.1", port=0, log_level="info", token=settings.token)
     assert settings.allowed_origins == ()
     assert not settings.unsafe_bind_any
+    assert not settings.shutdown_on_stdin_eof
 
 
 def test_env_vars_override_defaults() -> None:
@@ -91,3 +92,28 @@ def test_cli_origins_replace_env_origins() -> None:
     )
 
     assert settings.allowed_origins == ("app://x", "app://y")
+
+
+def test_ws_ping_interval_from_env_and_cli() -> None:
+    env = {"STUDIO_BACKEND_WS_PING_INTERVAL": "2.5"}
+
+    assert load_settings([], env={}).ws_ping_interval == 15.0
+    assert load_settings([], env=env).ws_ping_interval == 2.5
+    assert load_settings(["--ws-ping-interval", "0.5"], env=env).ws_ping_interval == 0.5
+
+
+@pytest.mark.parametrize("interval", ["0", "-1", "abc", "3601"])
+def test_invalid_ws_ping_interval_is_rejected(interval: str) -> None:
+    with pytest.raises(SettingsError, match="--ws-ping-interval"):
+        load_settings(["--ws-ping-interval", interval], env={})
+
+
+@pytest.mark.parametrize(
+    ("argv", "env"),
+    [
+        (["--shutdown-on-stdin-eof"], {}),
+        ([], {"STUDIO_BACKEND_SHUTDOWN_ON_STDIN_EOF": "1"}),
+    ],
+)
+def test_shutdown_on_stdin_eof_is_opt_in(argv: list[str], env: dict[str, str]) -> None:
+    assert load_settings(argv, env=env).shutdown_on_stdin_eof

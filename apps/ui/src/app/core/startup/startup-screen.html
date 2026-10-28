@@ -1,0 +1,36 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+@if (startup.phase() === 'failed') {
+  <section class="startup-error" data-testid="startup-error" role="alertdialog" aria-labelledby="startup-error-title">
+    <h1 id="startup-error-title" i18n="@@startup.error.title">The backend could not start</h1>
+    <p class="startup-error-reason" data-testid="startup-error-reason" [attr.data-reason]="startup.reason()">
+      @switch (startup.reason()) {
+        @case ('timeout') {
+          <span i18n="@@startup.error.timeout">It did not become ready in time.</span>
+        }
+        @case ('spawn-error') {
+          <span i18n="@@startup.error.spawn">It could not be launched. Check that uv is installed and on the PATH.</span>
+        }
+        @case ('bad-handshake') {
+          <span i18n="@@startup.error.handshake">It sent an unexpected startup message.</span>
+        }
+        @default {
+          <span i18n="@@startup.error.exited">It stopped unexpectedly.</span>
+        }
+      }
+    </p>
+    <p class="startup-error-hint" i18n="@@startup.error.hint">Details are in backend.log, in the logs folder of the app data.</p>
+    <div class="startup-error-actions">
+      <button type="button" data-testid="startup-error-retry" (click)="startup.retry()" i18n="@@startup.error.retry">
+        Retry
+      </button>
+      <button type="button" data-testid="startup-error-quit" (click)="startup.quit()" i18n="@@startup.error.quit">
+        Quit
+      </button>
+    </div>
+  </section>
+} @else {
+  <div class="splash" data-testid="splash" role="status">
+    <span class="splash-title" i18n="@@startup.splash.title">rlgym-learn studio</span>
+    <span class="splash-text" i18n="@@startup.splash.text">Starting the backend…</span>
+  </div>
+}

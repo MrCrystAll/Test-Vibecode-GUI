@@ -136,7 +136,9 @@ def test_token_is_not_in_the_config_repr() -> None:
     assert TEST_TOKEN not in repr(SecurityConfig(token=TEST_TOKEN))
 
 
-# --- WebSocket (the /ws endpoint itself arrives with TC-20) --------------------------------------
+# --- WebSocket handshake (the /ws protocol itself: test_ws.py) ----------------------------------
+
+BEARER = f"bearer.{TEST_TOKEN}"
 
 
 def _ws_app() -> FastAPI:
@@ -152,37 +154,41 @@ def _ws_app() -> FastAPI:
 
 
 @pytest.mark.parametrize(
-    ("path", "headers"),
+    ("subprotocols", "headers"),
     [
-        (f"{WS_URL}/test/ws?token={TEST_TOKEN}", {}),
-        (f"{WS_URL}/test/ws", AUTH),
-        (f"{WS_URL}/test/ws?token={TEST_TOKEN}", {"Origin": TEST_ORIGIN}),
+        (["studio.v1", BEARER], {}),  # browsers (ADR-0006)
+        ([], AUTH),  # Electron main process, CLI, tests
+        (["studio.v1", BEARER], {"Origin": TEST_ORIGIN}),
     ],
 )
-def test_websocket_with_token_connects(path: str, headers: dict[str, str]) -> None:
+def test_websocket_with_token_connects(subprotocols: list[str], headers: dict[str, str]) -> None:
     client = TestClient(_ws_app(), base_url=BASE_URL)
 
-    with client.websocket_connect(path, headers=headers) as ws:
+    with client.websocket_connect(
+        f"{WS_URL}/test/ws", subprotocols=subprotocols, headers=headers
+    ) as ws:
         assert ws.receive_text() == "hello"
 
 
 @pytest.mark.parametrize(
-    ("path", "headers"),
+    ("url", "subprotocols", "headers"),
     [
-        (f"{WS_URL}/test/ws", {}),
-        (f"{WS_URL}/test/ws?token=wrong", {}),
-        (f"{WS_URL}/test/ws?token={TEST_TOKEN}", {"Origin": "http://evil.example"}),
-        (f"{WS_URL}/test/ws?token={TEST_TOKEN}", {"Host": "evil.example"}),
+        (f"{WS_URL}/test/ws", ["studio.v1"], {}),
+        (f"{WS_URL}/test/ws", ["studio.v1", "bearer.wrong"], {}),
+        (f"{WS_URL}/test/ws", [f"Bearer.{TEST_TOKEN}"], {}),  # prefix is case-sensitive
+        (f"{WS_URL}/test/ws?token={TEST_TOKEN}", [], {}),  # never in the URL (ADR-0006)
+        (f"{WS_URL}/test/ws", [BEARER], {"Origin": "http://evil.example"}),
+        (f"{WS_URL}/test/ws", [BEARER], {"Host": "evil.example"}),
     ],
 )
 def test_websocket_without_token_or_from_bad_origin_is_refused(
-    path: str, headers: dict[str, str]
+    url: str, subprotocols: list[str], headers: dict[str, str]
 ) -> None:
     client = TestClient(_ws_app(), base_url=BASE_URL)
 
     with (
         pytest.raises(WebSocketDisconnect) as refused,
-        client.websocket_connect(path, headers=headers),
+        client.websocket_connect(url, subprotocols=subprotocols, headers=headers),
     ):
         pass
     assert refused.value.code == 1008

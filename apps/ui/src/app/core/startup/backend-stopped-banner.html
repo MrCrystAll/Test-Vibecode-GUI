@@ -1,0 +1,9 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<div class="backend-stopped" data-testid="backend-stopped" role="alert">
+  <span class="backend-stopped-text" i18n="@@backendStopped.text">
+    The backend stopped unexpectedly. Details are in backend.log, in the logs folder of the app data.
+  </span>
+  <button type="button" data-testid="backend-stopped-restart" (click)="startup.retry()" i18n="@@backendStopped.restart">
+    Restart
+  </button>
+</div>

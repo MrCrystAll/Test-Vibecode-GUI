@@ -83,6 +83,8 @@ developer/QA whose track it is. Blocks that need a decision (not a ticket) are o
 ### Commits
 [Conventional Commits](https://www.conventionalcommits.org): `feat(ui): add run list (TC-12)`. Scopes: `desktop`, `ui`,
 `backend`, `adapter`, `contract`, `config`, `ci`, `docs`. Breaking changes use `!` / `BREAKING CHANGE:` footers.
+The PR title becomes the squash-merge subject, so it must read `type(scope): summary (TC-n)`; the `pr-title` CI job
+checks it with [tools/ci/pr_title.py](../../tools/ci/pr_title.py) (run it locally with the title as argument).
 
 ### Pull requests
 - Target `dev`. Title = conventional-commit summary + ticket key. Body: ticket link, what/why, test evidence, screenshots for UI.
@@ -120,6 +122,11 @@ developer/QA whose track it is. Blocks that need a decision (not a ticket) are o
 - Hotfix on a release: `fix/` branch from `main`, patch bump `v0.N.1`, merged back into `dev`.
 - **1.0.0 freezes the public API** (HTTP/WS contract, config schema, extension points). After that, breaking = major.
 - Tag lookup before tagging: `git tag --list "v0.N.0-*" --sort=-v:refname | head -1`.
+- **Tag with the helper** (TC-27), from an up-to-date `dev` checkout with a clean tree:
+  `uv run --no-project python tools/tag-prerelease.py --version 0.N.0 --channel alpha --dry-run`, then again with
+  `--push` instead of `--dry-run`. It computes the next K with the lookup rule above, refuses to run off `dev`, on a
+  dirty tree or behind `origin/dev`, refuses an alpha once a beta exists, and creates an annotated tag
+  ([tools/tag-prerelease.py](../../tools/tag-prerelease.py)).
 
 ## Ticket comments: the work journal
 The owner follows the team through Jira comments, so **write in the ticket while you work, not just at transitions**.
