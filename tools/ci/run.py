@@ -6,6 +6,8 @@ Usage (from anywhere in the repo):
     uv run --no-project python tools/ci/run.py <step> [<step> ...]
 
 Steps: install, lint, typecheck, test, build, hooks, or `all` (every step in that order).
+`e2e` (TC-29) is not part of `all`: it launches the real desktop app, so it needs a finished `build` and a display
+(on Linux, wrap it in `xvfb-run -a`). CI runs it in its own job.
 
 What runs is discovered, so new apps and packages plug in without editing this file:
 - uv workspace members (root pyproject.toml): ruff if `[tool.ruff]`, mypy if `[tool.mypy]`, pytest if a `tests/`
@@ -31,6 +33,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PYTEST_TMP = ROOT / ".ci-tmp" / "pytest"
 STEPS = ("install", "lint", "typecheck", "test", "build", "hooks")
+# Steps that run only when named: they need more than a checkout (a build, a display).
+EXPLICIT_STEPS = ("e2e",)
 # Checks owned by other stories: (name, script relative to the repo root, arguments).
 # Each runs only once its script exists.
 HOOKS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
@@ -209,6 +213,10 @@ def step_hooks(runner: Runner) -> None:
             print(f"hook: {name} not present yet ({relative}), skipped")
 
 
+def step_e2e(runner: Runner) -> None:
+    runner.run("e2e: Playwright drives the desktop app", [*pnpm_command(), "--filter", "@studio/e2e", "run", "e2e"])
+
+
 STEP_FUNCTIONS = {
     "install": step_install,
     "lint": step_lint,
@@ -216,6 +224,7 @@ STEP_FUNCTIONS = {
     "test": step_test,
     "build": step_build,
     "hooks": step_hooks,
+    "e2e": step_e2e,
 }
 
 
@@ -223,7 +232,10 @@ def main(argv: Sequence[str]) -> int:
     steps = list(STEPS) if list(argv) == ["all"] else list(argv)
     unknown = [s for s in steps if s not in STEP_FUNCTIONS]
     if not steps or unknown:
-        print(f"usage: run.py <step>... | all   (steps: {', '.join(STEPS)})", file=sys.stderr)
+        print(
+            f"usage: run.py <step>... | all   (steps: {', '.join(STEPS)}; only when named: {', '.join(EXPLICIT_STEPS)})",
+            file=sys.stderr,
+        )
         return 2
     runner = Runner()
     for step in steps:

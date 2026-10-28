@@ -1,12 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // The single generated-client instance for the whole UI (ADR-0006). Components never see the token.
-import {
-  EnvironmentProviders,
-  Injectable,
-  inject,
-  provideAppInitializer,
-  signal,
-} from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { type ApiClient, createApiClient } from '@studio/contract';
 
 import { BACKEND_CONNECTION_SOURCE } from './backend-connection';
@@ -34,9 +28,4 @@ export class BackendApi {
       this.clientSignal.set(null);
     }
   }
-}
-
-/** Connects to the backend before the first screen renders. */
-export function provideBackendApi(): EnvironmentProviders {
-  return provideAppInitializer(() => inject(BackendApi).connect());
 }

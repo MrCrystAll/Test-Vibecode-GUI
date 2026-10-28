@@ -24,7 +24,7 @@ Run from `apps/ui/` (or `pnpm --filter @studio/ui <script>` from the repo root):
 
 ## Talking to the backend (TC-22)
 Only through the generated client in `@studio/contract` (ADR-0006). `core/api/BackendApi` holds the single client
-instance, created at start-up by `provideBackendApi()`. Components read `inject(BackendApi).client()` and never see
+instance; `core/startup/Startup` connects it at start-up (after the desktop shell reports the backend ready). Components read `inject(BackendApi).client()` and never see
 the token. ESLint rejects `fetch`, `XMLHttpRequest`, `WebSocket` and `@angular/common/http` everywhere in `src/`
 (`tools/http-lint.test.cjs` proves it). The one exception is `core/api/backend-connection.ts`, which reads the dev
 config below.
