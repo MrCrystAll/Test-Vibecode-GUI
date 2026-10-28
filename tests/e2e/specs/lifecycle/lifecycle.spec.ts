@@ -98,7 +98,9 @@ test('a second launch with the same profile exits and focuses the first window',
   const studio = await launchApp();
   await runningBackend(studio);
 
-  const second = spawn(electronBinary, [DESKTOP_DIR, `--user-data-dir=${studio.userData}`], {
+  // Playwright starts the first instance with --no-sandbox (CI containers cannot run Chromium's sandbox); so must we.
+  const noSandbox = process.platform === 'linux' ? ['--no-sandbox'] : [];
+  const second = spawn(electronBinary, [...noSandbox, DESKTOP_DIR, `--user-data-dir=${studio.userData}`], {
     cwd: REPO_ROOT,
     env: { ...process.env, ...(process.platform === 'linux' ? { STUDIO_E2E_NO_SANDBOX: '1' } : {}) },
     stdio: 'ignore',
