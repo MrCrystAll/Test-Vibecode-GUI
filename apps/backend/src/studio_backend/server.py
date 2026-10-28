@@ -11,7 +11,8 @@ import logging
 import os
 import socket
 import sys
-from typing import TextIO
+import threading
+from typing import BinaryIO, Protocol, TextIO
 
 import uvicorn
 
@@ -38,6 +39,28 @@ def announce(event: dict[str, object], stream: TextIO | None = None) -> None:
     out = sys.stdout if stream is None else stream
     out.write(json.dumps(event, separators=(",", ":")) + "\n")
     out.flush()
+
+
+class _Stoppable(Protocol):
+    should_exit: bool
+
+
+def watch_stdin(server: _Stoppable, stream: BinaryIO) -> threading.Thread:
+    """Ask the server to stop gracefully once `stream` reaches end of file.
+
+    The desktop app keeps the backend's stdin open and closes it to request a shutdown (TC-24).
+    The pipe also closes when the app itself dies, so the backend never outlives it.
+    """
+
+    def wait_for_eof() -> None:
+        while stream.read(4096):
+            pass  # nothing is ever sent on stdin; only the end of file matters
+        logger.info("stdin closed: shutting down")
+        server.should_exit = True
+
+    thread = threading.Thread(target=wait_for_eof, name="stdin-eof", daemon=True)
+    thread.start()
+    return thread
 
 
 async def _serve(server: uvicorn.Server, sock: socket.socket, token: str) -> None:
@@ -72,6 +95,8 @@ def run(settings: Settings) -> None:
         log_level=settings.log_level,
     )
     server = uvicorn.Server(config)
+    if settings.shutdown_on_stdin_eof:
+        watch_stdin(server, sys.stdin.buffer)
     try:
         asyncio.run(_serve(server, sock, settings.token))
     finally:

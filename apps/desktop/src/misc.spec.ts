@@ -60,8 +60,8 @@ describe('killPlan', () => {
     expect(killPlan('win32', 1234)).toEqual({ command: 'taskkill', args: ['/PID', '1234', '/T', '/F'] });
   });
 
-  it('signals the process group on Linux', () => {
-    expect(killPlan('linux', 1234)).toEqual({ signalGroup: -1234 });
+  it('signals the process group and the process itself on Linux (a serving PID is not a group leader)', () => {
+    expect(killPlan('linux', 1234)).toEqual({ signals: [-1234, 1234] });
   });
 });
 
