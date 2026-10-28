@@ -70,6 +70,9 @@ def run(settings: Settings) -> None:
         create_app(security, ws_ping_interval=settings.ws_ping_interval),
         log_config=None,  # keep our JSON logging (logging_config.py)
         log_level=settings.log_level,
+        # Named, not "auto": if `websockets` is missing the server fails at startup instead of
+        # silently answering /ws upgrades as plain HTTP (TC-20).
+        ws="websockets-sansio",
     )
     server = uvicorn.Server(config)
     try:
