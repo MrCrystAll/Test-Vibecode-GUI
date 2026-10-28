@@ -38,10 +38,26 @@ Scripted launch (e.g. Playwright's `_electron.launch`, TC-29): the entry is `app
 Any failure (cannot spawn, exits, bad handshake, timeout) moves the state machine (`startup.ts`) to `failed`, kills
 the attempt's process tree, and the UI shows the error with **Retry** and **Quit**.
 
-**Stopping the backend kills the whole process tree**, then the handshake `pid` (`process-tree.ts`). On Windows `uv run`
-is uv → venv launcher → python, and killing only the spawned uv leaves python serving: `taskkill /T /F` is used. On
-Linux the backend is spawned `detached` (its own process group) and the group is killed. Graceful shutdown, crash
-detection and the single-instance lock are TC-24.
+## Lifecycle (TC-24)
+- **Stop** (quit, window closed, Retry/Restart) is graceful first, then forced (`shutdown.ts`):
+  1. close the backend's stdin. It runs with `STUDIO_BACKEND_SHUTDOWN_ON_STDIN_EOF=1`, so the end of file is its
+     documented shutdown signal (apps/backend/README.md). Windows has no SIGTERM for a console child; a pipe closes
+     the same way everywhere;
+  2. wait up to 5 s for the serving python and the spawned process to exit;
+  3. otherwise **kill the whole process tree**, then the handshake `pid` (`process-tree.ts`). On Windows `uv run` is
+     uv → venv launcher → python, and killing only uv leaves python serving, so `taskkill /T /F` is used. On Linux the
+     backend is spawned `detached` (its own process group) and the group is killed;
+  4. check the PIDs are gone. `main.log` says `backend stop: graceful | killed | survived`.
+- **Shell killed** (crash, Task Manager): the stdin pipe closes with the process, so the backend stops by itself.
+  As a fallback, `<userData>/backend.pid` records the spawned and serving PIDs while the backend runs. At the next
+  start, a leftover that is still alive *and* still has a `studio-backend`/`studio_backend` command line is killed
+  (`pid-file.ts`; the command line check guards against reused PIDs).
+- **Backend dies after start-up**: the state goes `ready → stopped`. The app stays on screen with a "backend stopped"
+  banner (`backend-stopped`, button `backend-stopped-restart`). Restart spawns a new backend, so a new port and token;
+  the UI goes through the splash and rebuilds its client.
+- **Single instance per profile**: the lock is taken after `--user-data-dir` is applied, so e2e tests with their own
+  profiles never collide. A second launch with the same profile exits (code 0) and the first one restores and focuses
+  its window (`second launch: focusing the existing window` in `main.log`).
 
 ## Renderer security (TC-23 AC2)
 `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`. The preload (`preload.ts`) exposes only
@@ -53,7 +69,7 @@ The window refuses pop-ups and navigation to any other origin.
 |---|---|
 | `--user-data-dir=<path>` or `STUDIO_USER_DATA_DIR` | profile folder (one per e2e test). Logs go to `<userData>/logs/` |
 | `STUDIO_UI_URL` | load the UI from this URL (e.g. `ng serve`) instead of the built files |
-| `STUDIO_BACKEND_CMD` | backend command as a JSON array, e.g. a fake backend for tests |
+| `STUDIO_BACKEND_CMD` | backend command as a JSON array, e.g. a fake backend for tests (it gets `STUDIO_BACKEND_SHUTDOWN_ON_STDIN_EOF=1` too) |
 | `STUDIO_BACKEND_STARTUP_TIMEOUT_MS` | startup timeout (default 30000) |
 | `STUDIO_E2E_NO_SANDBOX=1` | Chromium `--no-sandbox`, **only** for Linux CI containers (with `xvfb-run`); the renderer stays sandboxed |
 

@@ -80,6 +80,27 @@ describe('Startup', () => {
     expect(startup.reason()).toBe('exited');
   });
 
+  it('after a crash, is stopped; Restart goes through the splash and connects again (new port and token)', async () => {
+    const { bridge, emit } = fakeBridge({ phase: 'ready' });
+    const { startup, api } = setup(bridge);
+    await startup.init();
+    await settle();
+    expect(api.connect).toHaveBeenCalledOnce();
+
+    emit({ phase: 'stopped' });
+    expect(startup.phase()).toBe('stopped');
+
+    startup.retry();
+    expect(startup.phase()).toBe('starting');
+    expect(bridge.retryBackend).toHaveBeenCalledOnce();
+
+    emit({ phase: 'starting' });
+    emit({ phase: 'ready' });
+    await settle();
+    expect(startup.phase()).toBe('ready');
+    expect(api.connect).toHaveBeenCalledTimes(2);
+  });
+
   it('Quit asks the shell to quit', async () => {
     const { bridge } = fakeBridge({ phase: 'failed', reason: 'spawn-error' });
     const { startup } = setup(bridge);

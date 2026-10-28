@@ -30,6 +30,7 @@ uv run --package studio-backend python -m studio_backend --port 0
 | API token (≥ 32 chars of `A-Z a-z 0-9 - _ . ~`); **env only**, command lines are visible to other users | — | `STUDIO_BACKEND_TOKEN` | random, 256 bits, per launch |
 | Browser origins allowed to call the API (e.g. `http://localhost:4200` for `ng serve`) | `--allowed-origin` (repeatable) | `STUDIO_BACKEND_ALLOWED_ORIGINS` (comma-separated) | none |
 | Development only: allow a non-loopback `--host` (logs a warning) | `--unsafe-bind-any` | `STUDIO_BACKEND_UNSAFE_BIND_ANY=1` | off |
+| Shut down gracefully when stdin is closed (how the desktop app stops the backend, TC-24) | `--shutdown-on-stdin-eof` | `STUDIO_BACKEND_SHUTDOWN_ON_STDIN_EOF=1` | off |
 
 Precedence: CLI > environment variable > default. Nothing is read from the working directory.
 
@@ -50,6 +51,11 @@ Precedence: CLI > environment variable > default. Nothing is read from the worki
   New keys may be added; consumers ignore keys they don't know.
 - **stderr** carries logs, one JSON object per line: `{"ts", "level", "logger", "message"[, "exc_info"]}`.
   The token is replaced by `***` everywhere in the logs (e.g. a WebSocket `?token=` in an access-log line).
+- **stdin** (only with `--shutdown-on-stdin-eof`): nothing is read from it, but its end of file is the **shutdown
+  signal**. The parent keeps the pipe open and closes it to stop the backend: uvicorn finishes in-flight requests and the
+  process exits with `0`. The pipe also closes when the parent dies, so the backend never outlives the desktop app.
+  This works the same on Windows, where a console child has no SIGTERM. Off by default, because a backend started
+  with stdin at `/dev/null` would stop at once.
 - Exit codes: `0` normal stop, `1` cannot start (e.g. port in use), `2` invalid settings.
 
 ### Local security (TC-19)

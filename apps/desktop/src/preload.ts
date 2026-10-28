@@ -12,7 +12,7 @@ const CHANNELS = {
 } as const;
 
 interface PublicStartupState {
-  phase: 'starting' | 'waiting-health' | 'ready' | 'failed';
+  phase: 'starting' | 'waiting-health' | 'ready' | 'failed' | 'stopped';
   reason?: 'spawn-error' | 'exited' | 'bad-handshake' | 'timeout';
 }
 
