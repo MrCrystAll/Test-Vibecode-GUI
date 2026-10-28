@@ -137,7 +137,17 @@ export class StudioApp {
       // main process dies, so end the whole tree.
       spawnSync('taskkill', ['/PID', String(proc.pid), '/T', '/F'], { stdio: 'ignore' });
     } else {
+      // Same on POSIX: Chromium's zygote/renderer/GPU children would outlive a bare SIGKILL of the main process and
+      // keep Playwright's pipes open (the worker then hangs at teardown). Collect the tree first, then kill it.
+      const tree = proc.pid === undefined ? [] : descendantPids(proc.pid);
       proc.kill('SIGKILL');
+      for (const pid of tree) {
+        try {
+          process.kill(pid, 'SIGKILL');
+        } catch {
+          // already gone
+        }
+      }
     }
     await Promise.race([exited, new Promise<void>((resolve) => setTimeout(resolve, 10_000))]);
   }
@@ -173,6 +183,27 @@ export class StudioApp {
       // the app was closed by the test: the trace cannot be written
     }
   }
+}
+
+/** All descendants of a process (POSIX, via `ps`); empty when `ps` is unavailable. */
+function descendantPids(root: number): number[] {
+  const out = spawnSync('ps', ['-e', '-o', 'pid=,ppid='], { encoding: 'utf-8' }).stdout ?? '';
+  const children = new Map<number, number[]>();
+  for (const line of out.split('\n')) {
+    const [pid, ppid] = line.trim().split(/\s+/).map(Number);
+    if (pid !== undefined && ppid !== undefined && !Number.isNaN(pid) && !Number.isNaN(ppid)) {
+      children.set(ppid, [...(children.get(ppid) ?? []), pid]);
+    }
+  }
+  const found: number[] = [];
+  const queue = [root];
+  while (queue.length > 0) {
+    for (const child of children.get(queue.pop() as number) ?? []) {
+      found.push(child);
+      queue.push(child);
+    }
+  }
+  return found;
 }
 
 /** True while a process with this pid exists (permission errors still mean it exists). */
