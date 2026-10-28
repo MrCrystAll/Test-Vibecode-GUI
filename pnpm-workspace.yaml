@@ -4,6 +4,7 @@ packages:
   - packages/contract
 allowBuilds:
   '@parcel/watcher': false
+  electron: true
   esbuild: true
   lmdb: false
   msgpackr-extract: false

@@ -311,7 +311,7 @@ through the release pipeline, and doesn't when the check is disabled; all 0.x wo
 schema and extension points (including the metrics sink) are documented and covered by contract tests; QA sign-off;
 release tagged `v1.0.0`.
 
-**Dependencies:** 0.9.0; resolution of risk R1 (below) before S1/B4 can ship.
+**Dependencies:** 0.9.0; the repository being public (risk R1, resolved) before S1/B4 can ship.
 
 ---
 
@@ -337,7 +337,7 @@ release tagged `v1.0.0`.
 ---
 
 ## Owner decisions (2026-10-25)
-1. Hosting and CI: GitHub (`MrCrystAll/Test-Vibecode-GUI`, private) with GitHub Actions.
+1. Hosting and CI: GitHub (`MrCrystAll/Test-Vibecode-GUI`, **to be made public**, owner decision 2026-10-26; Apache-2.0 licence already in place) with GitHub Actions.
 2. Platforms for 1.0: Windows and Linux. No macOS.
 3. The backend ships bundled with its own Python, separate from the training interpreter. **The API process never
    imports torch; rlgym-learn is reached only through the adapter package.** Introspection runs in the user's
@@ -356,7 +356,10 @@ release tagged `v1.0.0`.
 12. English only for 1.0; the UI is i18n-ready from 0.1.0 (strings externalised).
 
 ## Open risks
-- **R1 — auto-update from a private repository (1.0.0).** The repository is private, and electron-updater cannot read
-  private GitHub Releases without embedding a token in the app, which would leak repository access to every user.
-  Options to decide before 1.0.0: make releases public (public repo, or a separate public releases repo), or host the
-  update feed elsewhere (generic HTTPS server / S3). Raised with the owner by the supervisor; blocks 1.0.0 S1/B4.
+- **R1 — auto-update from a private repository (1.0.0): resolved (owner decision 2026-10-26).** The repository will be
+  made public, so electron-updater reads public GitHub Releases and no token is embedded in the app. The original
+  1.0.0 plan stands (B4 / S1).
+- **R2 — branch protection: resolved once the repository is public.** The supervisor enables protection on `dev` and
+  `main` after the switch: required CI checks, no force pushes. Required approvals are not possible because all agents
+  share one GitHub account, so peer review stays comment-based (`[DEV-x] APPROVED at <sha>` + `reviewed` label).
+  Until the switch, the supervisor's pre-merge checks are the gate.

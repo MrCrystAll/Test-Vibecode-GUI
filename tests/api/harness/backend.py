@@ -61,11 +61,12 @@ def backend_command() -> list[str]:
 
 @dataclass
 class Handshake:
-    """The first stdout line. `token` is None until TC-19 adds it to the handshake."""
+    """The first stdout line: `event`, `port`, `token` and `pid` (apps/backend/README.md)."""
 
     port: int
     token: str | None
     raw: dict[str, object]
+    pid: int = 0  # the python process serving the API; 0 if the backend did not say
 
 
 @dataclass
@@ -217,7 +218,12 @@ def start_backend(
     token = raw.get("token")
     bp = BackendProcess(
         process,
-        Handshake(port=port, token=token if isinstance(token, str) else None, raw=raw),
+        Handshake(
+            port=port,
+            token=token if isinstance(token, str) else None,
+            raw=raw,
+            pid=raw["pid"] if isinstance(raw.get("pid"), int) else 0,
+        ),
         log_path,
         stdout_lines,
         stderr_lines,

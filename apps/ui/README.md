@@ -24,7 +24,7 @@ Run from `apps/ui/` (or `pnpm --filter @studio/ui <script>` from the repo root):
 
 ## Talking to the backend (TC-22)
 Only through the generated client in `@studio/contract` (ADR-0006). `core/api/BackendApi` holds the single client
-instance, created at start-up by `provideBackendApi()`. Components read `inject(BackendApi).client()` and never see
+instance; `core/startup/Startup` connects it at start-up (after the desktop shell reports the backend ready). Components read `inject(BackendApi).client()` and never see
 the token. ESLint rejects `fetch`, `XMLHttpRequest`, `WebSocket` and `@angular/common/http` everywhere in `src/`
 (`tools/http-lint.test.cjs` proves it). The one exception is `core/api/backend-connection.ts`, which reads the dev
 config below.
@@ -37,7 +37,9 @@ The connection (`baseUrl` + token) is learned at runtime, never hard-coded:
   uv run --package studio-backend studio-backend --port 8765          # from the repo root, in another shell
   pnpm start                                                         # proxy.conf.json forwards /api to :8765
   ```
-  Once the backend requires a token (TC-19), paste the one from its handshake line into `token`.
+  Paste the `token` from the backend's handshake line (`{"event":"listening",...,"token":"…"}`, TC-19) into
+  `dev-connection.json`. Requests go through the proxy, so they are same-origin; if the backend ever rejects them
+  with 403 `origin_not_allowed`, start it with `STUDIO_BACKEND_ALLOWED_ORIGINS=http://localhost:4200`.
 
 Without a connection the app still starts; the System status screen (`/status`) then shows *Unreachable*.
 
