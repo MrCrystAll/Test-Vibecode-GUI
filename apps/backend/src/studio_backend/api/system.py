@@ -28,3 +28,8 @@ def get_health() -> HealthResponse:
 @router.get("/version", operation_id="getVersion")
 def get_version() -> VersionResponse:
     return VersionResponse(app_version=app_version(), api_version=API_VERSION)
+
+
+@router.get("/qa-probe", operation_id="getQaProbe")
+def get_qa_probe() -> HealthResponse:
+    return HealthResponse(status="ok")
