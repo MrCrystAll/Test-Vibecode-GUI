@@ -127,6 +127,19 @@ the exact config schema of the user's training code.
 (missing torch, wrong rlgym-learn version, non-importable entrypoint) the user sees a specific, actionable error; the
 backend process never imports torch or rlgym.
 
+**Refined after 0.1.0 (2026-10-29):**
+- Start with a **contract story** (introspection/check endpoints and error codes, stubbed backend), as in 0.2.0, so track B
+  can build B1-B3 against the generated client while track A builds the adapter.
+- Build the **fake interpreter** (answers `introspect` and `check-entrypoint`, test strategy §5/§9) as its own QA-owned
+  fixture story in the first week, before A2/A4 are validated, so no CI job ever needs torch or rlgym.
+- Launching the user's interpreter is a child process on Windows (`uv`/venv launchers add a wrapper process): the host
+  side reuses the whole-process-tree stop that 0.1.0 proved for the backend, with a timeout and no orphan after a kill
+  (add it to A1/A2's acceptance criteria).
+- ADR-0004 (accepted) fixes the launch contract and channels (spec file in, result JSON file out, stdout for humans only);
+  the stories implement it and do not reopen it. The runner side stays on the stdlib and Python >= 3.10.
+- A real-environment run (real torch/rlgym-learn) stays a manual QA case; record the machine and versions in the beta
+  report. Linux is checked by CI plus a manual pass on a real Linux install, which 0.1.0 lacked.
+
 **Dependencies:** 0.2.0 (projects store interpreter/entrypoint); ADR-0004.
 
 ---
