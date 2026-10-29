@@ -1,0 +1,11 @@
+{
+  "archived": false,
+  "createdAt": "2026-01-01T00:00:00Z",
+  "description": "Edited in a text editor.",
+  "id": "edit-me",
+  "kind": "project",
+  "name": "Edited by hand",
+  "schemaVersion": 1,
+  "updatedAt": "2026-01-01T01:00:00Z",
+  "upstream": null
+}

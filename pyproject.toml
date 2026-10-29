@@ -1,0 +1,18 @@
+# Root of the uv workspace (Python side of the monorepo, ADR-0001).
+# This root is virtual: it is never built or published, it only groups the members.
+[project]
+name = "studio-workspace"
+version = "0.0.0"
+requires-python = ">=3.12"
+
+[tool.uv]
+required-version = ">=0.13"
+package = false
+
+[tool.uv.workspace]
+members = [
+  "apps/backend",
+  "packages/config-schema",
+  "packages/rlgym-adapter",
+  "tests/api",
+]

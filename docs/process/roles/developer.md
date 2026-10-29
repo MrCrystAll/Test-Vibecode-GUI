@@ -1,7 +1,8 @@
 # Developer playbook `[DEV-A]` / `[DEV-B]`
 
 ## Loop
-1. **Reviews first.** If the other developer has a ticket in `To Review`, review it before starting new work.
+1. **Reviews first, then your own returned tickets.** Review the other developer's `To Review` tickets, then fix any
+   ticket of yours sent back to `To Do` by a failed review or QA, before starting new work.
 2. Pick the top unblocked `To Do` ticket (see JQL in workflow.md). Prefer tickets that don't touch the files the other
    developer is working on. Assign yourself, move to **In Progress**, comment `[DEV-x] picked up`.
 3. Create a worktree from up-to-date `dev`: `git worktree add ../wt-TC-<n> -b feat/TC-<n>-<slug> origin/dev`
@@ -14,9 +15,10 @@
 ## Reviewing
 - Move the ticket to **In Review**. Check: acceptance criteria met, tests meaningful, architecture rules in CLAUDE.md
   respected (no rlgym import outside the adapter, no app→app imports, contract regenerated), readable code.
-- Approve → `gh pr review <n> --comment -b "[DEV-x] APPROVED ..."`, add label `reviewed`, squash-merge, tag the alpha
+- Approve → `gh pr review <n> --comment -b "[DEV-x] APPROVED at <short SHA> ..."`, add label `reviewed`,
+  `gh pr merge <n> --squash --match-head-commit <SHA>`, tag the alpha
   pre-release (`v0.N.0-alpha.K`, push the tag), move the ticket to **In Test**, comment the tag.
-- Changes needed → `[DEV-x] CHANGES REQUESTED` with concrete points, ticket back to **In Progress**, message the author.
+- Changes needed → `[DEV-x] CHANGES REQUESTED` with concrete points, ticket back to **To Do** (*Review failed*), message the author.
 
 ## Rules
 - One ticket = one branch = one PR. Never push directly to `dev` or `main`.

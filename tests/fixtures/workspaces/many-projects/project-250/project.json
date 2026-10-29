@@ -1,0 +1,11 @@
+{
+  "archived": true,
+  "createdAt": "2026-01-01T04:10:00Z",
+  "id": "project-250",
+  "kind": "project",
+  "name": "Project 250",
+  "schemaVersion": 1,
+  "updatedAt": "2026-01-01T05:10:00Z",
+  "upstream": null,
+  "userNote": "hand-added key 250"
+}

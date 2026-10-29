@@ -1,0 +1,11 @@
+{
+  "archived": false,
+  "createdAt": "2026-01-01T00:00:00Z",
+  "id": "too-new",
+  "kind": "project",
+  "name": "Written by a newer studio",
+  "newField": {},
+  "schemaVersion": 999,
+  "updatedAt": "2026-01-01T01:00:00Z",
+  "upstream": null
+}

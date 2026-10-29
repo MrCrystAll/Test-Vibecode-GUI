@@ -1,0 +1,11 @@
+{
+  "archived": true,
+  "createdAt": "2026-01-01T04:30:00Z",
+  "description": "Description of project 210.",
+  "id": "project-210",
+  "kind": "project",
+  "name": "Équipe ünïcödé 210",
+  "schemaVersion": 1,
+  "updatedAt": "2026-01-01T05:30:00Z",
+  "upstream": null
+}

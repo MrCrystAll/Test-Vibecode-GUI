@@ -1,0 +1,47 @@
+# QA black-box API suite (test strategy §3). Not a distributable package: it only holds tests and their helpers.
+# It never depends on or imports app/package code; it talks to a spawned backend over HTTP/WS (TC-30 AC2).
+[project]
+name = "studio-api-tests"
+version = "0.0.0"
+description = "Black-box API tests against a real backend process."
+requires-python = ">=3.12"
+license = "Apache-2.0"
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "httpx>=0.27",
+  "jsonschema>=4.23",
+  "websockets>=13",
+  "psutil>=6",
+  "pytest>=8.3",
+  "ruff>=0.8",
+  "mypy>=1.13",
+  "types-psutil>=6",
+  "types-jsonschema>=4.23",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "S", "C4", "SIM", "RUF"]
+# assert is how pytest works; spawning the backend is the point of this suite.
+ignore = ["S101", "S603", "S607"]
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+files = ["."]
+
+[tool.pytest.ini_options]
+testpaths = ["."]
+addopts = ["--strict-markers"]
+markers = [
+  'ac(ticket, criterion): the acceptance criterion this test verifies, e.g. @pytest.mark.ac("TC-17", 1)',
+  "quarantine(reason): flaky test parked under a Jira Bug; still runs in a non-blocking job (strategy §8)",
+]

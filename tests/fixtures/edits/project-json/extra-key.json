@@ -1,0 +1,12 @@
+{
+  "archived": false,
+  "createdAt": "2026-01-01T00:00:00Z",
+  "description": "Original description.",
+  "id": "edit-me",
+  "kind": "project",
+  "name": "Edit me",
+  "schemaVersion": 1,
+  "updatedAt": "2026-01-01T01:00:00Z",
+  "upstream": null,
+  "userNote": "added by hand, must survive an app rename"
+}

@@ -1,0 +1,32 @@
+# Third-party licence policy (TC-28). Checked by tools/ci/hooks/licenses.py on every CI run.
+# Rationale and how to change this file: docs/process/licensing.md ("Dependency licences").
+
+# SPDX ids we may depend on from an Apache-2.0 project: permissive licences, plus MPL-2.0 (file-level
+# copyleft: fine for unmodified dependencies; modified MPL files must stay MPL and be published).
+allowed = [
+  "0BSD",
+  "Apache-2.0",
+  "BlueOak-1.0.0",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "CC0-1.0",
+  "ISC",
+  "MIT",
+  "MIT-0",
+  "MPL-2.0",
+  "PSF-2.0",
+  "Python-2.0",
+  "Unlicense",
+  "Zlib",
+]
+
+# Every exception names the ecosystem, the package and the exact licence it is allowed with, and says
+# why. An exception never covers another package or a changed licence.
+
+[[exception]]
+ecosystem = "npm"
+package = "caniuse-lite"
+license = "CC-BY-4.0"
+# Browser-support *data* read by browserslist at build time; no code from it ships. CC-BY-4.0 only asks
+# for attribution, which the generated third-party notices file provides.
+reason = "build-time browser-support data; attribution via third-party notices"

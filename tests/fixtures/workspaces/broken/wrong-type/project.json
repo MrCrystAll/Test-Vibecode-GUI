@@ -1,0 +1,10 @@
+{
+  "archived": "yes",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "id": "wrong-type",
+  "kind": "project",
+  "name": "Wrong type",
+  "schemaVersion": "1",
+  "updatedAt": "2026-01-01T01:00:00Z",
+  "upstream": null
+}

@@ -2,7 +2,7 @@
 
 Four AI agents and a supervisor work this repo, coordinated through **Jira project `TC`**
 (https://mathsuch63.atlassian.net, cloudId `7cf42fa5-f7fa-41ec-9758-6dd34429a227`) and git
-(GitHub: https://github.com/MrCrystAll/Test-Vibecode-GUI, private; use `gh`).
+(GitHub: https://github.com/MrCrystAll/Test-Vibecode-GUI, public since 2026-10-26; use `gh`).
 All agents share one human's Jira/GitHub identity, so **every Jira comment, PR description and PR review starts
 with a role tag**: `[PO]`, `[DEV-A]`, `[DEV-B]`, `[QA]`, `[SUPERVISOR]`.
 
@@ -34,8 +34,22 @@ The human owner has the final say on product direction; the supervisor relays.
 | In Test | Merged into `dev`; waiting for / under QA | Reviewer after merging |
 | Done | QA validated against the acceptance criteria | QA |
 
-Rejected review → back to **In Progress** (reviewer comments why). Failed QA → back to **In Progress** with a linked Bug
-or a QA comment listing the failures.
+Rejected review (Jira transition *Review failed*) and failed QA (*Validation failed*) both send the ticket back to
+**To Do**, keeping its assignee; the reviewer/QA comments why (QA also links a Bug when useful). A developer always picks
+up **their own returned tickets first**, before new work (JQL: `status = "To Do" AND assignee = currentUser() AND comment ~ "FAILED OR CHANGES REQUESTED"`).
+
+### Ownership and avoiding duplicate work
+All agents share one Jira account, so the assignee field can't tell them apart. Instead:
+- **Claim with a label.** Picking up a ticket = add `owner:dev-a`, `owner:dev-b`, `owner:qa` or `owner:po` (and the
+  `[ROLE] picked up` comment). Never start a ticket that carries someone else's `owner:` label; ask them instead.
+  Remove your label only when handing the ticket to someone else.
+- **Search before you file or fix.** Before creating a Bug, or starting a fix for a failure you saw, search Jira
+  (`project = TC AND statusCategory != Done AND text ~ "<key words>"`) **and** open PRs (`gh pr list --search "<words>"`).
+  If it's already filed or being fixed, comment there instead.
+- **A ticket with an open PR is never reassigned** or restarted by someone else; status alone isn't enough to tell, so
+  check `gh pr list --search "TC-<n>"` first.
+- **Duplicates and dropped tickets:** link `duplicates` to the original, add the label `duplicate`, comment, then close it
+  with the Jira transition **Won't do / Duplicate** (available from To Do). The PO closes dropped tickets the same way.
 
 ### Blocked
 A ticket that cannot move is **not** a status. Instead:
@@ -44,6 +58,11 @@ A ticket that cannot move is **not** a status. Instead:
 The PO sweeps `labels = blocked` regularly, resolves or escalates, and removes the label when unblocked.
 Developers never pick up `blocked` tickets.
 
+**Dependency unblocking:** a ticket blocked only by other tickets becomes workable once **every** blocker is merged into
+`dev` (status In Test or Done). Whoever merges a PR checks the tickets its ticket blocks; for each one whose blockers are
+now all merged, they remove the `blocked` label, comment `[ROLE] unblocked: TC-x merged in <tag>`, and message the
+developer/QA whose track it is. Blocks that need a decision (not a ticket) are only lifted by the PO.
+
 ### Useful JQL
 - Next work for devs: `project = TC AND status = "To Do" AND (labels IS EMPTY OR labels != blocked) ORDER BY rank`
 - Review queue: `project = TC AND status = "To Review"`
@@ -51,6 +70,9 @@ Developers never pick up `blocked` tickets.
 - Blocked: `project = TC AND labels = blocked`
 
 ## Git
+
+**CI:** every PR runs `.github/workflows/ci.yml` on Windows and Linux. Run the same checks locally with
+`uv run --no-project python tools/ci/run.py all` (details: [tools/ci/README.md](../../tools/ci/README.md)).
 
 ### Branches
 - `main` — released versions only. Every commit on `main` is tagged `vX.Y.Z`.
@@ -61,12 +83,38 @@ Developers never pick up `blocked` tickets.
 ### Commits
 [Conventional Commits](https://www.conventionalcommits.org): `feat(ui): add run list (TC-12)`. Scopes: `desktop`, `ui`,
 `backend`, `adapter`, `contract`, `config`, `ci`, `docs`. Breaking changes use `!` / `BREAKING CHANGE:` footers.
+The PR title becomes the squash-merge subject, so it must read `type(scope): summary (TC-n)`; the `pr-title` CI job
+checks it with [tools/ci/pr_title.py](../../tools/ci/pr_title.py) (run it locally with the title as argument).
+Only two kinds of title may omit the ticket key: process documents, `docs(process|adr|product): <summary>`, and
+release PRs into `main`, `release: vX.Y.Z`. Every other PR needs `(TC-n)`.
 
 ### Pull requests
 - Target `dev`. Title = conventional-commit summary + ticket key. Body: ticket link, what/why, test evidence, screenshots for UI.
 - Peer review is mandatory: DEV-A reviews DEV-B and vice-versa. Because both share one GitHub account, approval is a
   `gh pr review --comment` starting with `[DEV-x] APPROVED` plus the label `reviewed`. Change requests: `[DEV-x] CHANGES REQUESTED`.
+- The approval comment names the reviewed commit: `[DEV-x] APPROVED at <short SHA>`. **The author pushes nothing to an
+  approved PR**; a later push means a new review is needed (say so in the PR).
 - Merge = **squash merge** by the reviewer once approved and CI is green, then tag (see below) and move the ticket to In Test.
+  Always pin the approved commit so a late push can't slip in or get lost:
+  `gh pr merge <n> --squash --match-head-commit <approved full SHA>`.
+  **Who merges:** the agents' sessions are usually refused `gh pr merge` by Claude Code's safety check (every agent is
+  the same GitHub account, so it looks like self-merging). So the reviewer, once the approval is posted, messages the
+  **supervisor** with `PR #, approved SHA` (batch several in one message). The supervisor merges under the owner's
+  standing authorization (2026-10-25) when the PR has: a `[DEV-x] APPROVED at <sha>` from an agent other than the
+  author, the `reviewed` label, a head equal to that SHA, and green CI once CI exists. The check is done
+  **immediately before merging** and uses the reviewer's **latest** verdict: their most recent review/comment must
+  start with `[DEV-x] APPROVED at <current head SHA>`. Any later `CHANGES REQUESTED` (including one that withdraws an
+  approval) voids it, and so does a later push. To withdraw an approval, a reviewer posts `[DEV-x] CHANGES REQUESTED`
+  **and removes the `reviewed` label**, so the withdrawal is visible in two places. The supervisor then tags,
+  moves the ticket to In Test, applies the unblocking rule and messages `qa`. A reviewer whose own merge does go
+  through may finish those steps themselves.
+- **ADRs:** the PR sets the ADR to `Status: Accepted (YYYY-MM-DD)` before approval; merging the PR *is* the acceptance.
+  A rejected ADR is closed, not merged. Superseding happens in a new ADR.
+- **Branch protection** (since 2026-10-26, repo public): `dev` and `main` accept changes **only through PRs** whose CI
+  checks `checks (ubuntu-latest)` and `checks (windows-latest)` are green; no direct pushes, force-pushes or deletions,
+  and this applies to admins too (every agent is the same admin account). This includes the supervisor's own docs
+  changes. GitHub can't require approvals (one account can't approve its own PR), so peer review stays
+  `[DEV-x] APPROVED at <sha>` + `reviewed`, checked by the merger.
 - Release PRs `dev → main` are opened by the supervisor after QA signs off an epic, and merged with a merge commit.
 
 ## Versioning (SemVer 2.0 with pre-releases)
@@ -76,11 +124,35 @@ Developers never pick up `blocked` tickets.
 - Hotfix on a release: `fix/` branch from `main`, patch bump `v0.N.1`, merged back into `dev`.
 - **1.0.0 freezes the public API** (HTTP/WS contract, config schema, extension points). After that, breaking = major.
 - Tag lookup before tagging: `git tag --list "v0.N.0-*" --sort=-v:refname | head -1`.
+- **Tag with the helper** (TC-27), from an up-to-date `dev` checkout with a clean tree:
+  `uv run --no-project python tools/tag-prerelease.py --version 0.N.0 --channel alpha --dry-run`, then again with
+  `--push` instead of `--dry-run`. It computes the next K with the lookup rule above, refuses to run off `dev`, on a
+  dirty tree or behind `origin/dev`, refuses an alpha once a beta exists, and creates an annotated tag
+  ([tools/tag-prerelease.py](../../tools/tag-prerelease.py)).
+
+## Ticket comments: the work journal
+The owner follows the team through Jira comments, so **write in the ticket while you work, not just at transitions**.
+Always prefix with your role tag. Comment when you:
+- pick up a ticket: your plan in 2–5 bullets (approach, files/areas touched);
+- hit a struggle: `[ROLE] STRUGGLING: <what you tried, what failed, what you'll try next>`. Write it as soon as
+  something costs more than one failed attempt (failing CI you can't explain, unclear upstream behaviour, tooling on
+  Windows, ambiguous acceptance criteria), even if you solve it later. The owner and supervisor use these to improve
+  the process;
+- make a decision not covered by the ticket (and why), or deviate from the plan;
+- hand over (To Review, In Test, Done, back to In Progress): what changed, how it was verified, PR/tag links;
+- review or test: findings, linked from the PR review / Bug.
+Keep comments factual and short. Questions for someone go in the ticket **and** a message to them.
 
 ## Agent-to-agent communication
 - **Jira is the source of truth**; messages are for nudges and questions. Anything decided in a message gets written
-  into the ticket.
-- Agents can message each other directly (SendMessage / ListAgents by session name). Keep messages short and actionable.
+  into the ticket as a comment.
+- Agents are long-lived Claude sessions named `product-owner`, `dev-a`, `dev-b`, `qa`; the supervisor is the session
+  that started them. Message each other with SendMessage (find names with ListAgents). A message wakes an idle agent,
+  so **always message the next person in the chain** at a hand-over: author → other dev (To Review), reviewer → author
+  (changes requested / merged), merger → `qa` (In Test) and any dev/QA whose ticket got unblocked, QA → author (Bug).
+- **Keep working until there is nothing you can do**: after finishing a ticket, take the next one (reviews first). End
+  your turn only when you have no unblocked work, with a short status report (what you did, what you're waiting on).
+- Keep messages short and actionable.
 - Escalation path: developer/QA → PO (product questions) → supervisor (process / cross-team) → human owner.
 - **Upstream (rlgym-learn / rlgym-learn-algos):** never open issues or PRs upstream. If a limitation needs an upstream
   change, write it up in a Jira ticket labelled `upstream` and escalate to the supervisor; the owner handles it with
