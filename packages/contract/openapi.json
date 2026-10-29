@@ -547,6 +547,37 @@
         ]
       }
     },
+    "/api/qa-probe": {
+      "get": {
+        "operationId": "getQaProbe",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Get Qa Probe",
+        "tags": [
+          "system"
+        ]
+      }
+    },
     "/api/version": {
       "get": {
         "operationId": "getVersion",
