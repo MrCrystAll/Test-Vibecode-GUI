@@ -9,6 +9,7 @@ const CHANNELS = {
   startupState: 'studio:startup-state',
   retryBackend: 'studio:retry-backend',
   quit: 'studio:quit',
+  selectDirectory: 'studio:select-directory',
 } as const;
 
 interface PublicStartupState {
@@ -29,6 +30,8 @@ const studio = {
   },
   retryBackend: (): Promise<void> => ipcRenderer.invoke(CHANNELS.retryBackend),
   quit: (): Promise<void> => ipcRenderer.invoke(CHANNELS.quit),
+  /** Native folder dialog (TC-46): the chosen folder's path, or null when the user cancels. */
+  selectDirectory: (): Promise<string | null> => ipcRenderer.invoke(CHANNELS.selectDirectory),
 };
 
 contextBridge.exposeInMainWorld('studio', studio);

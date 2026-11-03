@@ -17,6 +17,7 @@ function fakeBridge(initial: ShellStartupState) {
     },
     retryBackend: vi.fn(async () => undefined),
     quit: vi.fn(async () => undefined),
+    selectDirectory: vi.fn(async () => null),
   };
   return { bridge, emit: (state: ShellStartupState) => listener?.(state) };
 }

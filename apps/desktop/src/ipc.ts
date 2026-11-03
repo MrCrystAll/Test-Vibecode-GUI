@@ -7,6 +7,7 @@ export const IPC = {
   startupState: 'studio:startup-state',
   retryBackend: 'studio:retry-backend',
   quit: 'studio:quit',
+  selectDirectory: 'studio:select-directory',
 } as const;
 
 /** What `window.studio.getBackendConnection()` resolves to (ADR-0006 shape). */

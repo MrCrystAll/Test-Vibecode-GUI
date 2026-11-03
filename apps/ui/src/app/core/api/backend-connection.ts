@@ -31,6 +31,8 @@ export interface StudioBridge {
   /** Starts a new backend after a failure or a crash (new port and token). */
   retryBackend(): Promise<void>;
   quit(): Promise<void>;
+  /** Native folder dialog (TC-46): the chosen folder's path, or null when the user cancels. */
+  selectDirectory(): Promise<string | null>;
 }
 
 /** The preload bridge, or null in a plain browser (`ng serve`). */

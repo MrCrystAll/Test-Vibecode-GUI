@@ -4,7 +4,7 @@
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { BrowserWindow, app, ipcMain, net, protocol } from 'electron';
+import { BrowserWindow, app, dialog, ipcMain, net, protocol } from 'electron';
 
 import { BackendSupervisor } from './backend';
 import { parseLaunchConfig, repoRootFrom } from './config';
@@ -12,6 +12,7 @@ import { IPC, type BackendConnection } from './ipc';
 import { openLogs } from './logs';
 import { cleanUpOrphans, pidFilePath } from './pid-file';
 import { commandLineOf, isAlive, killTree } from './process-tree';
+import { e2eHookAnswer, selectDirectory } from './select-directory';
 import { publicState, type StartupState } from './startup';
 import { UI_ORIGIN, UI_SCHEME, resolveUiFile } from './ui-files';
 
@@ -77,6 +78,25 @@ ipcMain.handle(IPC.getBackendConnection, () => {
 });
 ipcMain.handle(IPC.retryBackend, () => backend.retry());
 ipcMain.handle(IPC.quit, () => app.quit());
+// Folder picker (TC-46): only the studio window may open it; e2e tests answer it through STUDIO_E2E_SELECT_DIRECTORY.
+const selectDirectoryHook = e2eHookAnswer(process.env, app.isPackaged);
+if (selectDirectoryHook !== undefined && isPrimaryInstance) {
+  logs.log('test mode: selectDirectory answered by STUDIO_E2E_SELECT_DIRECTORY');
+}
+ipcMain.handle(IPC.selectDirectory, (event) => {
+  const frame = event.senderFrame;
+  const window = mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
+  return selectDirectory(
+    { webContentsId: event.sender.id, isMainFrame: frame?.parent === null, frameUrl: frame?.url ?? '' },
+    {
+      trusted: window ? { webContentsId: window.webContents.id, uiOrigin } : null,
+      hookAnswer: selectDirectoryHook,
+      // Only reached for a trusted sender, so `window` is set; the dialog is modal to it.
+      showDialog: () =>
+        dialog.showOpenDialog(window as BrowserWindow, { properties: ['openDirectory', 'createDirectory'] }),
+    },
+  );
+});
 
 // --- window ----------------------------------------------------------------------------------------
 function createWindow(): BrowserWindow {

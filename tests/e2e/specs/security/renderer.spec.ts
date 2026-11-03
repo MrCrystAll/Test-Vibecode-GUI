@@ -3,7 +3,14 @@
 import { expect, fakeBackendCommand, test } from '../../support/fixtures';
 
 // The renderer-side API documented in apps/desktop/README.md (what the preload exposes, and nothing else).
-const DOCUMENTED_BRIDGE = ['getBackendConnection', 'getStartupState', 'onStartupState', 'quit', 'retryBackend'];
+const DOCUMENTED_BRIDGE = [
+  'getBackendConnection',
+  'getStartupState',
+  'onStartupState',
+  'quit',
+  'retryBackend',
+  'selectDirectory', // TC-46
+];
 
 test('the renderer has no Node access and only the documented bridge', {
   tag: ['@TC-23', '@TC-23-AC2'],
