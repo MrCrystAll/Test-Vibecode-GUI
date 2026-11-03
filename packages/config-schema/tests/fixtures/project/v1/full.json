@@ -1,0 +1,29 @@
+{
+  "archived": true,
+  "createdAt": "2026-01-01T00:00:00Z",
+  "description": "Every field set, non-ASCII text: Équipe 日本語.",
+  "id": "full",
+  "kind": "project",
+  "name": "Équipe ünïcödé",
+  "schemaVersion": 1,
+  "updatedAt": "2026-02-03T04:05:06Z",
+  "upstream": {
+    "zeta": 1e-05,
+    "alpha": 0.1,
+    "nested": {
+      "b": [
+        1,
+        2.5,
+        null,
+        true
+      ],
+      "a": "text"
+    },
+    "big": 12345678901234567890,
+    "empty": {}
+  },
+  "userNote": {
+    "z": 1,
+    "a": 2
+  }
+}

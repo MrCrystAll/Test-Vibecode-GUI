@@ -1,0 +1,84 @@
+{
+  "$defs": {
+    "JsonValue": {}
+  },
+  "$id": "https://raw.githubusercontent.com/MrCrystAll/Test-Vibecode-GUI/main/packages/config-schema/schemas/project.v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "description": "A studio project, stored as `<workspace>/<id>/project.json`.\n\nUnknown top-level keys are kept on round-trip, so a newer studio's fields and hand-added keys\nsurvive a save by this studio. `upstream` holds the rlgym-learn configuration verbatim as opaque\nJSON; the studio does not interpret it here.",
+  "properties": {
+    "archived": {
+      "default": false,
+      "description": "Archived projects are hidden by default.",
+      "type": "boolean"
+    },
+    "createdAt": {
+      "description": "Creation time, ISO-8601 UTC (`YYYY-MM-DDTHH:MM:SSZ`).",
+      "format": "date-time",
+      "type": "string"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional free-text description."
+    },
+    "id": {
+      "description": "The project's folder name: lowercase `a-z`, `0-9` and `-`, 1 to 64 characters. Immutable: renaming a project changes `name` only.",
+      "pattern": "^[a-z0-9-]{1,64}$",
+      "type": "string"
+    },
+    "kind": {
+      "const": "project",
+      "description": "Always `project`.",
+      "type": "string"
+    },
+    "name": {
+      "description": "Display name, 1 to 100 characters.",
+      "maxLength": 100,
+      "minLength": 1,
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": 1,
+      "description": "Version of the project file format. This schema describes version 1.",
+      "type": "integer"
+    },
+    "updatedAt": {
+      "description": "Last change, ISO-8601 UTC (`YYYY-MM-DDTHH:MM:SSZ`).",
+      "format": "date-time",
+      "type": "string"
+    },
+    "upstream": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The rlgym-learn configuration, verbatim and opaque to this schema. Empty (`null` or absent) until 0.3.0."
+    }
+  },
+  "required": [
+    "kind",
+    "schemaVersion",
+    "id",
+    "name",
+    "createdAt",
+    "updatedAt"
+  ],
+  "title": "ProjectFile",
+  "type": "object"
+}

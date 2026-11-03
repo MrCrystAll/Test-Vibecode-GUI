@@ -1,7 +1,51 @@
 [project]
 name = "studio-config-schema"
-version = "0.0.0"
+version = "0.1.0"
 description = "Versioned studio file schemas (project/run envelopes), JSON Schema export and migrations."
+readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
-dependencies = []
+# Never rlgym-learn, torch or an apps/* module (ADR-0001, CLAUDE.md rule 3): the upstream config is opaque JSON here.
+dependencies = [
+  "pydantic>=2.9,<3",
+]
+
+[project.scripts]
+generate-schemas = "studio_config_schema.generate:main"
+
+[dependency-groups]
+dev = [
+  # Off-the-shelf validator: proves the published schema works for third parties (TC-32 AC4, QA X2-4).
+  "jsonschema>=4.23",
+  "mypy>=1.13",
+  "pytest>=8.3",
+  "ruff>=0.8",
+]
+
+[build-system]
+requires = ["uv_build>=0.13,<0.14"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "S", "C4", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+files = ["src", "tests"]
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["jsonschema", "jsonschema.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--strict-markers"]

@@ -3,3 +3,4 @@
 *.ico binary
 packages/contract/openapi.json text eol=lf linguist-generated=true
 packages/contract/src/generated/** text eol=lf linguist-generated=true
+packages/config-schema/schemas/*.schema.json text eol=lf linguist-generated=true
