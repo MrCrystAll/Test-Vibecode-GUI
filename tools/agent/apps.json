@@ -1,0 +1,14 @@
+{
+  "dev-a": {
+    "slug": "rlgym-studio-dev-a",
+    "app_id": 5599185,
+    "installation_id": 178330618,
+    "bot_user_id": 352097722
+  },
+  "dev-b": {
+    "slug": "rlgym-studio-dev-b",
+    "app_id": 5601526,
+    "installation_id": 178331113,
+    "bot_user_id": 352156634
+  }
+}

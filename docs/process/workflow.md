@@ -90,15 +90,22 @@ release PRs into `main`, `release: vX.Y.Z`. Every other PR needs `(TC-n)`.
 
 ### Pull requests
 - Target `dev`. Title = conventional-commit summary + ticket key. Body: ticket link, what/why, test evidence, screenshots for UI.
-- Peer review is mandatory: DEV-A reviews DEV-B and vice-versa. Because both share one GitHub account, approval is a
-  `gh pr review --comment` starting with `[DEV-x] APPROVED` plus the label `reviewed`. Change requests: `[DEV-x] CHANGES REQUESTED`.
-- The approval comment names the reviewed commit: `[DEV-x] APPROVED at <short SHA>`. **The author pushes nothing to an
-  approved PR**; a later push means a new review is needed (say so in the PR).
+- **GitHub identities** (TC-47, since 2026-11-03): each developer acts on GitHub as its own GitHub App bot,
+  `rlgym-studio-dev-a[bot]` and `rlgym-studio-dev-b[bot]`. Every GitHub write a developer makes (commit, push, PR,
+  review, label, comment) goes through `uv run --script tools/agent/as_app.py dev-a|dev-b -- <gh or git command>`
+  (see the script's docstring). Reading needs no wrapper. The apps' private keys live outside the repo, in
+  `%USERPROFILE%\.studio-agents\`: never print, copy or commit them. PO, QA and the supervisor still use the owner's account.
+- Peer review is mandatory: DEV-A reviews DEV-B and vice-versa, and a developer reviews QA's, PO's and the supervisor's
+  PRs. Approval is a real GitHub review from the reviewer's app:
+  `as_app.py dev-x -- gh pr review <n> --approve --body "[DEV-x] APPROVED at <short SHA> ..."`, plus the label `reviewed`.
+  Change requests: `as_app.py dev-x -- gh pr review <n> --request-changes --body "[DEV-x] CHANGES REQUESTED ..."`.
+- The approval names the reviewed commit: `[DEV-x] APPROVED at <short SHA>`. **The author pushes nothing to an
+  approved PR**; GitHub now dismisses the approval automatically on a new push, and a new review is needed.
 - Merge = **squash merge** by the reviewer once approved and CI is green, then tag (see below) and move the ticket to In Test.
   Always pin the approved commit so a late push can't slip in or get lost:
   `gh pr merge <n> --squash --match-head-commit <approved full SHA>`.
-  **Who merges:** the agents' sessions are usually refused `gh pr merge` by Claude Code's safety check (every agent is
-  the same GitHub account, so it looks like self-merging). So the reviewer, once the approval is posted, messages the
+  **Who merges:** the supervisor, by the owner's choice (2026-10-28); agents' sessions are also usually refused
+  `gh pr merge` by Claude Code's safety check. So the reviewer, once the approval is posted, messages the
   **supervisor** with `PR #, approved SHA` (batch several in one message). The supervisor merges under the owner's
   standing authorization (2026-10-25) when the PR has: a `[DEV-x] APPROVED at <sha>` from an agent other than the
   author, the `reviewed` label, a head equal to that SHA, and green CI once CI exists. The check is done
@@ -111,10 +118,13 @@ release PRs into `main`, `release: vX.Y.Z`. Every other PR needs `(TC-n)`.
 - **ADRs:** the PR sets the ADR to `Status: Accepted (YYYY-MM-DD)` before approval; merging the PR *is* the acceptance.
   A rejected ADR is closed, not merged. Superseding happens in a new ADR.
 - **Branch protection** (since 2026-10-26, repo public): `dev` and `main` accept changes **only through PRs** whose CI
-  checks `checks (ubuntu-latest)` and `checks (windows-latest)` are green; no direct pushes, force-pushes or deletions,
-  and this applies to admins too (every agent is the same admin account). This includes the supervisor's own docs
-  changes. GitHub can't require approvals (one account can't approve its own PR), so peer review stays
-  `[DEV-x] APPROVED at <sha>` + `reviewed`, checked by the merger.
+  checks `checks (ubuntu-latest)`, `checks (windows-latest)`, `e2e (ubuntu-latest)` and `e2e (windows-latest)` are
+  green; no direct pushes, force-pushes or deletions, and this applies to admins too. This includes the supervisor's
+  own docs changes. Since TC-47, GitHub also **requires 1 approving review** from someone other than the PR's author
+  and dismisses it when new commits are pushed. A developer's app approval counts; the author can't approve their own
+  PR. A PR opened from the owner's account (PO, QA, supervisor) needs a developer app's approval too.
+- Merged branches are deleted automatically by GitHub (since 2026-11-03). Never push to a branch after its PR merged:
+  it would recreate the branch with commits that are not on `dev`.
 - Release PRs `dev → main` are opened by the supervisor after QA signs off an epic, and merged with a merge commit.
 
 ## Versioning (SemVer 2.0 with pre-releases)
