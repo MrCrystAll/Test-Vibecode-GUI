@@ -62,7 +62,7 @@ CI uploads them as artefacts (TC-26).
   (repeat the marker for several). The epic test plan (`docs/qa/<version>-test-plan.md`) names the test.
 - **Fixtures are read-only.** Copy them with `copy_fixture` / `workspace_from_fixture`; never write under
   `tests/fixtures/`. Each test works in its own temp dir and, from 0.2.0, its own workspace and
-  `STUDIO_SETTINGS_DIR`.
+  `STUDIO_BACKEND_SETTINGS_DIR`.
 - **Hostile paths by default:** use `hostile_tmp` (or the copy helpers, which already use hostile names).
 - **No sleeps.** Wait for a condition with a deadline (poll an endpoint, read a log line); never `time.sleep(n)`
   as a synchronisation.

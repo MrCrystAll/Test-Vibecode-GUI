@@ -7,7 +7,7 @@ workspace path and the result of each numbered step in the Jira journal or the b
 Conventions:
 - `<app-cmd>`: the documented dev launch of the desktop app (TC-23). `<backend-cmd>`: the documented backend
   command (`apps/backend/README.md`).
-- `<ud1>`, `<ud2>`: two separate Electron user-data dirs, and `<sd1>`, `<sd2>` two `STUDIO_SETTINGS_DIR`s, so the
+- `<ud1>`, `<ud2>`: two separate Electron user-data dirs, and `<sd1>`, `<sd2>` two `STUDIO_BACKEND_SETTINGS_DIR`s, so the
   instances share nothing but the workspace. Use the documented way to set them (env var or CLI flag, TC-23/TC-34).
 - `<ws>`: a fresh copy of a fixture from `tests/fixtures/workspaces/`, made **before** each procedure into a folder
   whose path contains a space and a non-ASCII character, e.g. `C:\qa tmp é\ws` or `~/qa tmp é/ws`.
