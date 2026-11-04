@@ -46,6 +46,8 @@ HOOKS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ("workspace-fixtures", "tests/fixtures/workspaces/generate.py", ("--check",)),
     # TC-28: every dependency's licence is on the allow-list in tools/ci/licenses.toml
     ("licenses", "tools/ci/hooks/licenses.py", ()),
+    # TC-33: the config-schema migration corpus is append-only (needs the merge base: fetch-depth 0 in CI)
+    ("corpus-immutable", "tools/ci/hooks/corpus-immutable.py", ()),
 )
 IN_GITHUB_ACTIONS = os.environ.get("GITHUB_ACTIONS") == "true"
 

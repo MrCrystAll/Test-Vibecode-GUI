@@ -14,6 +14,8 @@ from typing import Annotated, Any, ClassVar
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, PlainSerializer, field_validator
 
+from studio_config_schema.migrations import Migrations
+
 TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 
@@ -73,6 +75,8 @@ class Envelope(BaseModel):
     """Value of `kind` for this file type."""
     SCHEMA_VERSION: ClassVar[int]
     """The newest `schemaVersion` this studio reads and writes for this file type."""
+    MIGRATIONS: ClassVar[Migrations]
+    """The sealed chain from the oldest readable version to `SCHEMA_VERSION` (TC-33)."""
 
     kind: str = Field(description="File type. Tells studio files apart without relying on names.")
     schema_version: int = Field(

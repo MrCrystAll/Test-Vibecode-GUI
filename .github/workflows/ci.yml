@@ -31,6 +31,9 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history: the corpus-immutable hook (TC-33) compares with the base branch's merge base.
+          fetch-depth: 0
 
       - name: Set up uv (Python from .python-version)
         uses: astral-sh/setup-uv@v6

@@ -1,0 +1,10 @@
+{
+  "kind": "sample",
+  "name": "Équipe sample",
+  "schemaVersion": 1,
+  "tags": [
+    "alpha",
+    "beta"
+  ],
+  "userNote": "kept by the migration"
+}
