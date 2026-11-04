@@ -45,6 +45,9 @@ pnpm install --frozen-lockfile  # TypeScript workspace
 ```
 
 Without `corepack enable`, use `corepack pnpm install --frozen-lockfile` instead.
+The install also downloads the Electron binary for `apps/desktop` (its `postinstall`, TC-48; the download is cached
+per machine). If Electron ever fails to launch, `corepack pnpm --filter @studio/desktop run check-electron` says why
+and `corepack pnpm --filter @studio/desktop run install-electron` fetches it again.
 Per-app commands (run, test, lint, build) are documented in each folder's README as they are added.
 
 ### Troubleshooting: repository on an exFAT/FAT drive (Windows)

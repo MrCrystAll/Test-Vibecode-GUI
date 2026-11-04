@@ -96,4 +96,15 @@ pnpm --filter @studio/desktop typecheck
 pnpm --filter @studio/desktop test    # Vitest, pure modules only: no Electron is launched
 pnpm --filter @studio/desktop build   # tsc -> dist/
 ```
-`electron` downloads its binary the first time it is required; CI never launches it.
+**Electron binary (TC-48):** since Electron 45 the `electron` package has no install script, so pnpm's build
+settings do not fetch the binary. This package's `postinstall` runs Electron's `install-electron` bin instead: a
+fresh `pnpm install` leaves a working binary in `node_modules/electron/dist/`, downloaded once per machine and then
+taken from Electron's cache. `start`, `dev` and CI's e2e step first run `scripts/check-electron.cjs`, which fails
+with the fix when the binary is missing or from another version:
+
+```bash
+pnpm --filter @studio/desktop run check-electron     # "Electron binary OK: …" or what is wrong + the fix
+pnpm --filter @studio/desktop run install-electron   # (re)download it; does nothing when it is already there
+```
+
+Vitest never launches Electron.
