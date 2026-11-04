@@ -2,6 +2,9 @@
 """TC-32 AC2/AC3: round-trip and canonical serialisation (QA T-32-2, T-32-3)."""
 
 import json
+import os
+import stat
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -164,3 +167,12 @@ def test_save_is_atomic_and_canonical(tmp_path: Path) -> None:
     save(target, project)
     assert target.read_bytes() == (CORPUS / "full.json").read_bytes()
     assert [p.name for p in tmp_path.iterdir()] == ["project.json"]  # no temp file left behind
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX permission bits")
+def test_save_keeps_the_target_permissions(tmp_path: Path) -> None:
+    target = tmp_path / "project.json"
+    target.write_bytes(b"old")
+    os.chmod(target, 0o644)
+    save(target, load(CORPUS / "minimal.json", ProjectFile))
+    assert stat.S_IMODE(target.stat().st_mode) == 0o644

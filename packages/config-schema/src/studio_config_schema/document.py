@@ -13,7 +13,9 @@ seconds and `+00:00` offsets are accepted; the next save normalises them.
 """
 
 import json
+import math
 import os
+import stat
 import tempfile
 from pathlib import Path
 from typing import Any, NoReturn
@@ -32,7 +34,7 @@ def loads[E: Envelope](data: bytes | str, model: type[E], *, path: Path | None =
     if not text.strip():
         _fail(path, ErrorReason.INVALID_JSON, "", "the file is empty")
     try:
-        raw = json.loads(text, parse_constant=_reject_constant)
+        raw = json.loads(text, parse_constant=_reject_constant, parse_float=_finite_float)
     except json.JSONDecodeError as exc:
         _fail(
             path,
@@ -76,10 +78,14 @@ def save(path: Path, document: Envelope) -> None:
     fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
     tmp = Path(tmp_name)
     try:
+        # mkstemp creates the file 0600; keep the target's mode (e.g. 0644).
+        mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else None
         with os.fdopen(fd, "wb") as f:
             f.write(payload)
             f.flush()
             os.fsync(f.fileno())
+        if mode is not None:
+            tmp.chmod(mode)
         tmp.replace(path)
     except BaseException:
         tmp.unlink(missing_ok=True)
@@ -93,6 +99,14 @@ def _decode(data: bytes | str, path: Path | None) -> str:
         return data.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
         _fail(path, ErrorReason.INVALID_JSON, "", f"not UTF-8 text (byte {exc.start})")
+
+
+def _finite_float(text: str) -> float:
+    """Reject numbers out of float range (`1e400` would load as inf and then fail to save)."""
+    value = float(text)
+    if math.isinf(value):
+        raise ValueError(f"not valid JSON: {text} is out of range for a number")
+    return value
 
 
 def _reject_constant(name: str) -> NoReturn:

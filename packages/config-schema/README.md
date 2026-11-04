@@ -42,7 +42,8 @@ else:
 - **Optional fields absent from a file stay absent** when it is saved again; an unchanged file saves to the same bytes.
 - **Canonical bytes on save:** UTF-8 without BOM and without `\u` escapes, LF, 2-space indent, the envelope's
   top-level keys sorted, one trailing newline, timestamps as `YYYY-MM-DDTHH:MM:SSZ`. The content of `upstream` (and
-  of unknown keys) keeps its key order and values.
+  of unknown keys) keeps its key order and JSON values; number *spelling* is not preserved (`1e5` is written back
+  as `100000.0`, `1.50` as `1.5`). Numbers out of float range (`1e400`), `NaN` and `Infinity` are refused on load.
 - **Lenient on load:** a UTF-8 BOM, CRLF, fractional seconds and `+00:00`/other offsets are accepted and normalised on
   the next save. A timestamp without an offset is refused.
 - **Strict types:** `"1"` is not an integer, `"yes"` is not a boolean.

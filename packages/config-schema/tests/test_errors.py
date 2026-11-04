@@ -36,6 +36,7 @@ def refused(data: bytes | str, path: Path | None = None) -> SchemaFileError:
         (b'{"kind": "project",', ErrorReason.INVALID_JSON, "", "line 1"),
         (b"\xff\xfe{}", ErrorReason.INVALID_JSON, "", "UTF-8"),
         (b'{"x": NaN}', ErrorReason.INVALID_JSON, "", "NaN"),
+        (b'{"x": -1e400}', ErrorReason.INVALID_JSON, "", "out of range"),
         (b"[]", ErrorReason.INVALID_CONTENT, "", "an array"),
         (b'"text"', ErrorReason.INVALID_CONTENT, "", "a string"),
         (b"null", ErrorReason.INVALID_CONTENT, "", "null"),
@@ -144,3 +145,15 @@ def test_qa_edit_fixtures(name: str, reason: ErrorReason) -> None:
     with pytest.raises(SchemaFileError) as caught:
         load(path, ProjectFile)
     assert caught.value.reason is reason
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [{"upstream": {"x": "OUT"}}, {"userNote": "OUT"}, {"userNote": {"deep": ["OUT"]}}],
+)
+def test_out_of_range_number_is_refused_at_load(extra: dict[str, object]) -> None:
+    """A file that loads must save: `1e400` would load as inf, then fail in json.dumps."""
+    text = json.dumps({**VALID, **extra}).replace('"OUT"', "1e400")
+    error = refused(text)
+    assert error.reason is ErrorReason.INVALID_JSON
+    assert "1e400" in error.message
