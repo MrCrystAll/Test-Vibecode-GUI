@@ -35,6 +35,33 @@ else:
     save(Path("my-project/project.json"), project.model_copy(update={"name": "Renamed"}))
 ```
 
+## Older files: migrations (TC-33)
+
+Each file type has a sealed chain of `vN -> vN+1` steps (`Migrations`, next to its model). Loading a file
+older than the current version runs every step on the raw JSON, then validates the result with the current model.
+
+| Function | Writes? | Use |
+|---|---|---|
+| `load(path, Model)` / `loads(data, Model)` | never | read-only callers: migrate in memory |
+| `read(path, Model)` | never | as `load`, plus `migrated_from` (the old version, or `None`) |
+| `upgrade(path, Model)` | only if migrated | copies the original to `.backup/<file name>.v<old>.<YYYYMMDDTHHMMSSZ>.json` (never overwrites one: `-2`, `-3`...), then rewrites the file atomically |
+
+A current file is never rewritten (same bytes, same mtime). A too-new file is never migrated or written
+(`too_new`). A step that raises leaves the file untouched (`migration_failed`, naming the step). A chain with a gap,
+a duplicate step or a step past the current version fails at import.
+
+### Adding a version of a file type (e.g. project v1 -> v2)
+
+1. **Corpus first:** make sure `tests/fixtures/<kind>/v1/` has samples of the old format. Never edit an existing
+   sample: the corpus is append-only, and the CI hook `corpus-immutable` fails on any change, deletion or rename.
+2. **Bump:** in the model, `SCHEMA_VERSION = 2`, `schema_version: Literal[2]`, `Migrations("<kind>", current=2)`.
+3. **Migration:** `@<KIND>_MIGRATIONS.step(1)` taking and returning the raw dict (never the model), placed before
+   `.seal()`. It must not depend on the current model, which will change again.
+4. **Corpus sample for v2:** add `tests/fixtures/<kind>/v2/*.json`. `test_every_corpus_sample_loads` loads every
+   sample of every version with the current code, and `test_corpus_layout` wants one folder per readable version.
+5. **Schema:** run `generate-schemas`. It writes `schemas/<kind>.v2.schema.json`; keep the committed v1 file.
+6. **Tell QA** to regenerate `tests/fixtures/workspaces` (TC-42 agreement) and activate X2-2b in the test plan.
+
 ## Rules a file follows
 
 - **Unknown top-level keys are kept.** Load then save gives the same data, so a newer studio's fields and keys a
@@ -55,7 +82,7 @@ Every content problem raises **`SchemaFileError`** with:
 | Attribute | Meaning |
 |---|---|
 | `path` | the file (`None` when parsed from memory) |
-| `reason` | `invalid_json` (empty, syntax, NaN, not UTF-8), `invalid_content` (not an object, missing field, wrong type or value), `too_new` (`schemaVersion` newer than supported) |
+| `reason` | `invalid_json` (empty, syntax, NaN, not UTF-8), `invalid_content` (not an object, missing field, wrong type or value), `too_new` (`schemaVersion` newer than supported), `migration_failed` (an older file's migration step raised; the message names the step) |
 | `pointer`, `message` | RFC 6901 JSON pointer (`""` = whole document, e.g. `/archived`) and a human message for the first issue |
 | `issues` | every issue found, each with `pointer` and `message` |
 
@@ -79,6 +106,8 @@ never changes once released: a format change is a new `schemaVersion` with its o
 uv run --package studio-config-schema pytest packages/config-schema
 ```
 
-- `tests/fixtures/<kind>/v<N>/`: samples of each released version (append-only; the corpus TC-33 migrates from).
+- `tests/fixtures/<kind>/v<N>/`: samples of each released version, append-only (CI hook `corpus-immutable`).
+  `sample/` is a test-only kind (`tests/sample_kind.py`, v0 -> v1) that proves the migration mechanism; the shipped
+  package never registers it.
 - QA's whole-workspace fixtures in the repository's `tests/fixtures/` are also read as data when present; those tests
   are skipped once the package lives in its own repository.
