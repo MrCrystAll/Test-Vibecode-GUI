@@ -190,6 +190,11 @@ def test_websocket_models_are_published_in_the_openapi_schema() -> None:
         "subscribed",
         "unsubscribed",
         "error",
+        "project.created",
+        "project.updated",
+        "project.deleted",
+        "workspace.changed",
+        "workspace.rescanned",
     }
     for name in ("WsPing", "WsSubscribe", "WsError"):
         assert set(schemas[name]["required"]) == {"type", "version", "id", "ts", "payload"}

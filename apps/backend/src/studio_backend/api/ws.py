@@ -4,7 +4,8 @@
 Authentication, Host and Origin checks happen before this code runs (security.py). Here:
 - the client must offer the `studio.v1` subprotocol, which is echoed back;
 - the server sends `ping` every `app.state.ws_ping_interval` seconds;
-- each client message is validated; a bad one gets an `error` event and the connection stays open.
+- each client message is validated; a bad one gets an `error` event and the connection stays open;
+- server events reach the session through the app's `EventHub` once it subscribed to their topic.
 """
 
 import asyncio
@@ -36,6 +37,7 @@ from studio_backend.events import (
     client_message_adapter,
     server_message_adapter,
 )
+from studio_backend.hub import EventHub
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -136,6 +138,8 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         return
     await websocket.accept(subprotocol=SUBPROTOCOL)
     session = Session(websocket)
+    hub: EventHub = websocket.app.state.hub
+    hub.register(session)
     pinger = asyncio.create_task(session.ping_forever(websocket.app.state.ws_ping_interval))
     try:
         while True:
@@ -143,4 +147,5 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     except WebSocketDisconnect:
         pass
     finally:
+        hub.unregister(session)
         pinger.cancel()

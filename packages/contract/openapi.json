@@ -1,6 +1,72 @@
 {
   "components": {
     "schemas": {
+      "CreateProjectRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Folder name. Omitted: derived from `name` and never taken. Given: used as is, or refused with `invalid_project_id` / `project_id_taken`.",
+            "title": "Id"
+          },
+          "name": {
+            "description": "Display name.",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CreateProjectRequest",
+        "type": "object"
+      },
+      "DeletedProject": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "trash_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the folder went, when the backend knows it (OS trash: `null`).",
+            "title": "Trash Path"
+          }
+        },
+        "required": [
+          "id",
+          "trash_path"
+        ],
+        "title": "DeletedProject",
+        "type": "object"
+      },
       "EmptyPayload": {
         "additionalProperties": false,
         "properties": {},
@@ -80,6 +146,55 @@
         "title": "ErrorResponse",
         "type": "object"
       },
+      "FileIssue": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "pointer": {
+            "description": "RFC 6901 JSON pointer; `\"\"` is the whole document.",
+            "title": "Pointer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pointer",
+          "message"
+        ],
+        "title": "FileIssue",
+        "type": "object"
+      },
+      "FileProblem": {
+        "description": "Where a file is broken. `details` of a `file_invalid`, `file_too_new` or\n`migration_failed` error, and `Problem.file`.",
+        "properties": {
+          "issues": {
+            "description": "Every issue found, at least one.",
+            "items": {
+              "$ref": "#/components/schemas/FileIssue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "path": {
+            "description": "Absolute path of the file.",
+            "title": "Path",
+            "type": "string"
+          },
+          "pointer": {
+            "description": "Pointer of the first issue.",
+            "title": "Pointer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "pointer",
+          "issues"
+        ],
+        "title": "FileProblem",
+        "type": "object"
+      },
       "HealthResponse": {
         "properties": {
           "status": {
@@ -92,6 +207,279 @@
           "status"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "JsonValue": {},
+      "OpenWorkspaceRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "description": "Absolute folder path. An existing workspace is opened; an empty or missing folder is initialised as a new workspace.",
+            "minLength": 1,
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "OpenWorkspaceRequest",
+        "type": "object"
+      },
+      "Problem": {
+        "description": "Why a workspace or project is in the `error` state.",
+        "properties": {
+          "code": {
+            "enum": [
+              "workspace_not_open",
+              "workspace_in_use",
+              "workspace_not_empty",
+              "invalid_workspace_path",
+              "project_not_found",
+              "project_id_taken",
+              "invalid_project_id",
+              "project_read_only",
+              "file_invalid",
+              "file_too_new",
+              "migration_failed"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FileProblem"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "Problem",
+        "type": "object"
+      },
+      "Project": {
+        "description": "One project folder of the workspace.\n\n`status: \"error\"` projects are listed so the user can see and fix them, but they are read-only:\n`PATCH` and `DELETE` answer `project_read_only`.",
+        "properties": {
+          "file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProjectFile"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The parsed `project.json` (TC-32 schema); `null` when it can't be read."
+          },
+          "id": {
+            "description": "The folder name. Immutable.",
+            "title": "Id",
+            "type": "string"
+          },
+          "path": {
+            "description": "Absolute path of the project folder.",
+            "title": "Path",
+            "type": "string"
+          },
+          "problem": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Problem"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set when `status` is `error`."
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "path",
+          "status",
+          "file"
+        ],
+        "title": "Project",
+        "type": "object"
+      },
+      "ProjectEventPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "app",
+              "external"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "source"
+        ],
+        "title": "ProjectEventPayload",
+        "type": "object"
+      },
+      "ProjectFile": {
+        "additionalProperties": true,
+        "description": "A studio project, stored as `<workspace>/<id>/project.json`.\n\nUnknown top-level keys are kept on round-trip, so a newer studio's fields and hand-added keys\nsurvive a save by this studio. `upstream` holds the rlgym-learn configuration verbatim as opaque\nJSON; the studio does not interpret it here.",
+        "properties": {
+          "archived": {
+            "default": false,
+            "description": "Archived projects are hidden by default.",
+            "title": "Archived",
+            "type": "boolean"
+          },
+          "createdAt": {
+            "description": "Creation time, ISO-8601 UTC (`YYYY-MM-DDTHH:MM:SSZ`).",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional free-text description.",
+            "title": "Description"
+          },
+          "id": {
+            "description": "The project's folder name: lowercase `a-z`, `0-9` and `-`, 1 to 64 characters. Immutable: renaming a project changes `name` only.",
+            "pattern": "^[a-z0-9-]{1,64}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "project",
+            "description": "Always `project`.",
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "description": "Display name, 1 to 100 characters.",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "schemaVersion": {
+            "const": 1,
+            "description": "Version of the project file format. This schema describes version 1.",
+            "title": "Schemaversion",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "description": "Last change, ISO-8601 UTC (`YYYY-MM-DDTHH:MM:SSZ`).",
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "upstream": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/JsonValue"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The rlgym-learn configuration, verbatim and opaque to this schema. Empty (`null` or absent) until 0.3.0.",
+            "title": "Upstream"
+          }
+        },
+        "required": [
+          "kind",
+          "schemaVersion",
+          "id",
+          "name",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "ProjectFile",
+        "type": "object"
+      },
+      "ProjectList": {
+        "properties": {
+          "items": {
+            "description": "Sorted by id.",
+            "items": {
+              "$ref": "#/components/schemas/Project"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ProjectList",
+        "type": "object"
+      },
+      "RecentWorkspace": {
+        "properties": {
+          "opened_at": {
+            "description": "Last time it was opened, ISO-8601 UTC.",
+            "format": "date-time",
+            "title": "Opened At",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "opened_at"
+        ],
+        "title": "RecentWorkspace",
+        "type": "object"
+      },
+      "RecentWorkspaces": {
+        "properties": {
+          "items": {
+            "description": "Most recent first.",
+            "items": {
+              "$ref": "#/components/schemas/RecentWorkspace"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "RecentWorkspaces",
         "type": "object"
       },
       "ReplyPayload": {
@@ -118,7 +506,10 @@
         "additionalProperties": false,
         "properties": {
           "topic": {
-            "const": "system",
+            "enum": [
+              "system",
+              "workspace"
+            ],
             "title": "Topic",
             "type": "string"
           }
@@ -137,7 +528,10 @@
             "type": "string"
           },
           "topic": {
-            "const": "system",
+            "enum": [
+              "system",
+              "workspace"
+            ],
             "title": "Topic",
             "type": "string"
           }
@@ -147,6 +541,49 @@
           "reply_to"
         ],
         "title": "TopicReplyPayload",
+        "type": "object"
+      },
+      "UpdateProjectRequest": {
+        "additionalProperties": false,
+        "description": "Only the fields sent change. `description: null` clears it. The id never changes.",
+        "properties": {
+          "archived": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "UpdateProjectRequest",
         "type": "object"
       },
       "VersionResponse": {
@@ -165,6 +602,122 @@
           "api_version"
         ],
         "title": "VersionResponse",
+        "type": "object"
+      },
+      "Workspace": {
+        "description": "The workspace the backend works in. At most one is open at a time.",
+        "properties": {
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Absolute path; `null` in the `none` state.",
+            "title": "Path"
+          },
+          "problem": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Problem"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set in the `error` state only."
+          },
+          "state": {
+            "description": "`none`: nothing opened yet. `open`: ready. `error`: see `problem`.",
+            "enum": [
+              "none",
+              "open",
+              "error"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "watching": {
+            "description": "Whether external edits are seen live. `false`: the UI should offer a refresh.",
+            "title": "Watching",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "state",
+          "path",
+          "watching"
+        ],
+        "title": "Workspace",
+        "type": "object"
+      },
+      "WorkspaceChangedPayload": {
+        "additionalProperties": false,
+        "description": "The open workspace changed: opened, switched, closed, or its state changed.",
+        "properties": {
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "source": {
+            "enum": [
+              "app",
+              "external"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "source"
+        ],
+        "title": "WorkspaceChangedPayload",
+        "type": "object"
+      },
+      "WorkspaceErrorCode": {
+        "enum": [
+          "workspace_not_open",
+          "workspace_in_use",
+          "workspace_not_empty",
+          "invalid_workspace_path",
+          "project_not_found",
+          "project_id_taken",
+          "invalid_project_id",
+          "project_read_only",
+          "file_invalid",
+          "file_too_new",
+          "migration_failed"
+        ],
+        "type": "string"
+      },
+      "WorkspaceRescannedPayload": {
+        "additionalProperties": false,
+        "description": "The project index was rebuilt; anything listed before may have changed.",
+        "properties": {
+          "source": {
+            "enum": [
+              "app",
+              "external"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source"
+        ],
+        "title": "WorkspaceRescannedPayload",
         "type": "object"
       },
       "WsClientMessage": {
@@ -315,14 +868,142 @@
         "title": "WsPong",
         "type": "object"
       },
+      "WsProjectCreated": {
+        "additionalProperties": false,
+        "description": "Topic `workspace`: a project appeared. Fetch it with `GET /api/projects/{id}`.",
+        "properties": {
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/ProjectEventPayload"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "project.created",
+            "default": "project.created",
+            "title": "Type",
+            "type": "string"
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "id",
+          "ts",
+          "type",
+          "payload"
+        ],
+        "title": "WsProjectCreated",
+        "type": "object"
+      },
+      "WsProjectDeleted": {
+        "additionalProperties": false,
+        "description": "Topic `workspace`: a project is gone (moved to the trash, or its folder removed).",
+        "properties": {
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/ProjectEventPayload"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "project.deleted",
+            "default": "project.deleted",
+            "title": "Type",
+            "type": "string"
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "id",
+          "ts",
+          "type",
+          "payload"
+        ],
+        "title": "WsProjectDeleted",
+        "type": "object"
+      },
+      "WsProjectUpdated": {
+        "additionalProperties": false,
+        "description": "Topic `workspace`: a project's file changed (rename, description, archive, hand edit).",
+        "properties": {
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/ProjectEventPayload"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "project.updated",
+            "default": "project.updated",
+            "title": "Type",
+            "type": "string"
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "id",
+          "ts",
+          "type",
+          "payload"
+        ],
+        "title": "WsProjectUpdated",
+        "type": "object"
+      },
       "WsServerMessage": {
         "discriminator": {
           "mapping": {
             "error": "#/components/schemas/WsError",
             "ping": "#/components/schemas/WsPing",
             "pong": "#/components/schemas/WsPong",
+            "project.created": "#/components/schemas/WsProjectCreated",
+            "project.deleted": "#/components/schemas/WsProjectDeleted",
+            "project.updated": "#/components/schemas/WsProjectUpdated",
             "subscribed": "#/components/schemas/WsSubscribed",
-            "unsubscribed": "#/components/schemas/WsUnsubscribed"
+            "unsubscribed": "#/components/schemas/WsUnsubscribed",
+            "workspace.changed": "#/components/schemas/WsWorkspaceChanged",
+            "workspace.rescanned": "#/components/schemas/WsWorkspaceRescanned"
           },
           "propertyName": "type"
         },
@@ -341,6 +1022,21 @@
           },
           {
             "$ref": "#/components/schemas/WsError"
+          },
+          {
+            "$ref": "#/components/schemas/WsProjectCreated"
+          },
+          {
+            "$ref": "#/components/schemas/WsProjectUpdated"
+          },
+          {
+            "$ref": "#/components/schemas/WsProjectDeleted"
+          },
+          {
+            "$ref": "#/components/schemas/WsWorkspaceChanged"
+          },
+          {
+            "$ref": "#/components/schemas/WsWorkspaceRescanned"
           }
         ]
       },
@@ -507,12 +1203,94 @@
         ],
         "title": "WsUnsubscribed",
         "type": "object"
+      },
+      "WsWorkspaceChanged": {
+        "additionalProperties": false,
+        "description": "Topic `workspace`: re-read `GET /api/workspace` and the project list.",
+        "properties": {
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/WorkspaceChangedPayload"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "workspace.changed",
+            "default": "workspace.changed",
+            "title": "Type",
+            "type": "string"
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "id",
+          "ts",
+          "type",
+          "payload"
+        ],
+        "title": "WsWorkspaceChanged",
+        "type": "object"
+      },
+      "WsWorkspaceRescanned": {
+        "additionalProperties": false,
+        "description": "Topic `workspace`: re-read the project list.",
+        "properties": {
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/WorkspaceRescannedPayload"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "workspace.rescanned",
+            "default": "workspace.rescanned",
+            "title": "Type",
+            "type": "string"
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "id",
+          "ts",
+          "type",
+          "payload"
+        ],
+        "title": "WsWorkspaceRescanned",
+        "type": "object"
       }
     }
   },
   "info": {
     "title": "Studio backend",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -547,6 +1325,232 @@
         ]
       }
     },
+    "/api/projects": {
+      "get": {
+        "description": "Projects of the open workspace, including those in the `error` state.\n\nErrors: `workspace_not_open`.",
+        "operationId": "listProjects",
+        "parameters": [
+          {
+            "description": "`false` (default): active only; `true`; `all`.",
+            "in": "query",
+            "name": "archived",
+            "required": false,
+            "schema": {
+              "default": "false",
+              "description": "`false` (default): active only; `true`; `all`.",
+              "enum": [
+                "false",
+                "true",
+                "all"
+              ],
+              "title": "Archived",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List Projects",
+        "tags": [
+          "projects"
+        ]
+      },
+      "post": {
+        "description": "Create a project. Errors: `workspace_not_open`, `invalid_project_id`, `project_id_taken`.\nEmits `project.created`.",
+        "operationId": "createProject",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProjectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Create Project",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/projects/{project_id}": {
+      "delete": {
+        "description": "Move the project folder to the trash.\n\nErrors: `workspace_not_open`, `project_not_found`, `project_read_only`. Emits\n`project.deleted`.",
+        "operationId": "deleteProject",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedProject"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete Project",
+        "tags": [
+          "projects"
+        ]
+      },
+      "get": {
+        "description": "Errors: `workspace_not_open`, `project_not_found`.",
+        "operationId": "getProject",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Get Project",
+        "tags": [
+          "projects"
+        ]
+      },
+      "patch": {
+        "description": "Rename (display name only), describe, archive or unarchive. The id never changes.\n\nErrors: `workspace_not_open`, `project_not_found`, `project_read_only`. Emits\n`project.updated` when something changed.",
+        "operationId": "updateProject",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProjectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Update Project",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
     "/api/version": {
       "get": {
         "operationId": "getVersion",
@@ -575,6 +1579,112 @@
         "summary": "Get Version",
         "tags": [
           "system"
+        ]
+      }
+    },
+    "/api/workspace": {
+      "get": {
+        "description": "The current workspace and its state.",
+        "operationId": "getWorkspace",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workspace"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Get Workspace",
+        "tags": [
+          "workspace"
+        ]
+      }
+    },
+    "/api/workspace/open": {
+      "post": {
+        "description": "Open an existing workspace, or initialise a new one in an empty or missing folder.\n\nErrors: `invalid_workspace_path`, `workspace_not_empty` (a non-empty folder that is not a\nworkspace), `workspace_in_use` (another studio has it open), `file_invalid` / `file_too_new`\n(its workspace file). Emits `workspace.changed`.",
+        "operationId": "openWorkspace",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenWorkspaceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workspace"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Open Workspace",
+        "tags": [
+          "workspace"
+        ]
+      }
+    },
+    "/api/workspace/recent": {
+      "get": {
+        "description": "Workspaces opened before, most recent first.",
+        "operationId": "getRecentWorkspaces",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecentWorkspaces"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Get Recent Workspaces",
+        "tags": [
+          "workspace"
         ]
       }
     }

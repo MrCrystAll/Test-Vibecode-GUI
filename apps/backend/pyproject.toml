@@ -12,11 +12,16 @@ dependencies = [
   "uvicorn>=0.32",
   # uvicorn has no WebSocket implementation of its own: without this, /ws answers as plain HTTP (TC-20).
   "websockets>=13",
+  # Project files are served with their TC-32 models (TC-35); never copied.
+  "studio-config-schema",
 ]
 
 [project.scripts]
 studio-backend = "studio_backend.__main__:main"
 export-openapi = "studio_backend.openapi:main"
+
+[tool.uv.sources]
+studio-config-schema = { workspace = true }
 
 [dependency-groups]
 dev = [
