@@ -224,6 +224,11 @@ def step_hooks(runner: Runner) -> None:
 
 
 def step_e2e(runner: Runner) -> None:
+    # TC-48: a missing Electron binary fails here with the fix, not as a launch error inside the first test.
+    runner.run(
+        "e2e: Electron binary present",
+        [*pnpm_command(), "--filter", "@studio/desktop", "run", "check-electron"],
+    )
     runner.run("e2e: Playwright drives the desktop app", [*pnpm_command(), "--filter", "@studio/e2e", "run", "e2e"])
 
 

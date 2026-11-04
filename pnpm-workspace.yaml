@@ -5,7 +5,7 @@ packages:
   - tests/e2e
 allowBuilds:
   '@parcel/watcher': false
-  electron: true
+  electron: true # no install script since Electron 45; @studio/desktop's postinstall downloads the binary (TC-48)
   esbuild: true
   lmdb: false
   msgpackr-extract: false

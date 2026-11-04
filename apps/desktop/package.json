@@ -10,8 +10,11 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "start": "electron .",
-    "dev": "pnpm --filter @studio/ui build && pnpm run build && electron ."
+    "postinstall": "install-electron",
+    "install-electron": "install-electron",
+    "check-electron": "node scripts/check-electron.cjs",
+    "start": "node scripts/check-electron.cjs && electron .",
+    "dev": "pnpm --filter @studio/ui build && pnpm run build && node scripts/check-electron.cjs && electron ."
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
