@@ -18,13 +18,14 @@ from typing import Any
 
 from studio_config_schema.envelope import Envelope
 from studio_config_schema.project import ProjectFile
+from studio_config_schema.workspace import AppSettings, WorkspaceMarker
 
 DIALECT = "https://json-schema.org/draft/2020-12/schema"
 ID_BASE = "https://raw.githubusercontent.com/MrCrystAll/Test-Vibecode-GUI/main/packages/config-schema/schemas/"
 SCHEMAS_DIR = Path(__file__).resolve().parents[2] / "schemas"
 COMMAND = "uv run --package studio-config-schema generate-schemas"
 
-MODELS: tuple[type[Envelope], ...] = (ProjectFile,)
+MODELS: tuple[type[Envelope], ...] = (ProjectFile, WorkspaceMarker, AppSettings)
 
 
 def file_name(model: type[Envelope]) -> str:

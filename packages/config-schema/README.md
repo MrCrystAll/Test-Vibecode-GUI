@@ -17,6 +17,10 @@ upstream rlgym-learn config verbatim), their published JSON Schema, and forward 
 | Kind | File | Model | Current `schemaVersion` | JSON Schema |
 |---|---|---|---|---|
 | `project` | `<workspace>/<id>/project.json` | `ProjectFile` | 1 | [`schemas/project.v1.schema.json`](schemas/project.v1.schema.json) |
+| `workspace` | `<workspace>/.studio/workspace.json` | `WorkspaceMarker` | 1 | [`schemas/workspace.v1.schema.json`](schemas/workspace.v1.schema.json) |
+| `app-settings` | `settings.json` in the OS user config dir (TC-34) | `AppSettings` | 1 | [`schemas/app-settings.v1.schema.json`](schemas/app-settings.v1.schema.json) |
+
+The folder layout around these files is specified in [docs/spec/workspace-layout.md](../../docs/spec/workspace-layout.md).
 
 Every file is an **envelope** (`Envelope`): `kind` + `schemaVersion`, then the file type's fields. `schemaVersion` is
 a per-file-type integer counting up from 1 during 0.x; at 1.0.0 the versions in use are frozen as the public baseline.
