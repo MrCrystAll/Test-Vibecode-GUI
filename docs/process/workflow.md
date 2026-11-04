@@ -42,6 +42,7 @@ The human owner has the final say on product direction; the supervisor relays.
 | Finish dev | 5 | In Progress → To Review |
 | Start review | 2 | To Review or In Progress → In Review |
 | Merged | 6 | any open status before In Test → In Test |
+| Validated | 8 | In Test → Done (QA, or the PO for QA's own tickets) |
 | Back To Do | 10 | any status → To Do (failed review, failed validation, abandoned start) |
 | Won't do / Duplicate | 9 | To Do → Done |
 | Close Epic | 11 | an epic, any status → Done |
