@@ -11,6 +11,7 @@ from sample_kind import SAMPLE_MIGRATIONS, SampleFile
 
 from studio_config_schema import (
     BACKUP_DIR,
+    AppSettings,
     Envelope,
     ErrorReason,
     MigrationChainError,
@@ -18,6 +19,7 @@ from studio_config_schema import (
     MigrationStepError,
     ProjectFile,
     SchemaFileError,
+    WorkspaceMarker,
     load,
     read,
     upgrade,
@@ -25,7 +27,12 @@ from studio_config_schema import (
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 CORPUS = PACKAGE_ROOT / "tests" / "fixtures"
-MODELS: dict[str, type[Envelope]] = {"project": ProjectFile, "sample": SampleFile}
+MODELS: dict[str, type[Envelope]] = {
+    "project": ProjectFile,
+    "sample": SampleFile,
+    "workspace": WorkspaceMarker,
+    "app-settings": AppSettings,
+}
 """Every kind in the corpus. A new corpus folder without a model here fails test_corpus_layout."""
 NOW = datetime(2026, 11, 4, 17, 45, 0, tzinfo=UTC)
 V0 = (CORPUS / "sample" / "v0" / "basic.json").read_bytes()

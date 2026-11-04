@@ -1,0 +1,24 @@
+{
+  "$id": "https://raw.githubusercontent.com/MrCrystAll/Test-Vibecode-GUI/main/packages/config-schema/schemas/workspace.v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "description": "`<workspace>/.studio/workspace.json`: its presence makes a folder a studio workspace.\n\nv1 carries only the envelope. Unknown keys are kept, like in every studio file.",
+  "properties": {
+    "kind": {
+      "const": "workspace",
+      "description": "Always `workspace`.",
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": 1,
+      "description": "Version of the workspace marker format. This schema describes version 1.",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "kind",
+    "schemaVersion"
+  ],
+  "title": "WorkspaceMarker",
+  "type": "object"
+}

@@ -1,0 +1,45 @@
+{
+  "$id": "https://raw.githubusercontent.com/MrCrystAll/Test-Vibecode-GUI/main/packages/config-schema/schemas/app-settings.v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "description": "The studio's own settings, in the OS user config dir (`settings.json`).\n\nPaths are absolute, as the user's OS spells them. They are remembered, not trusted: opening one\ngoes through the same checks as a path the user just picked.",
+  "properties": {
+    "currentWorkspace": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Absolute path of the workspace opened last, or null before the first one."
+    },
+    "kind": {
+      "const": "app-settings",
+      "description": "Always `app-settings`.",
+      "type": "string"
+    },
+    "recentWorkspaces": {
+      "description": "Absolute paths of recently opened workspaces, most recent first, at most 10, without duplicates.",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 10,
+      "type": "array"
+    },
+    "schemaVersion": {
+      "const": 1,
+      "description": "Version of the app settings format. This schema describes version 1.",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "kind",
+    "schemaVersion"
+  ],
+  "title": "AppSettings",
+  "type": "object"
+}

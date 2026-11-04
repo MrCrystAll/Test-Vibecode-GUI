@@ -111,6 +111,22 @@ with `1008`.
   `uv run --package studio-backend export-openapi` (`--check` to verify). Commit it with every route change; see
   `packages/contract/README.md`.
 
+### Workspaces (TC-34)
+`studio_backend.workspace` opens the user's workspace folder; the layout, id rules and odd-folder rules are specified
+in [docs/spec/workspace-layout.md](../../docs/spec/workspace-layout.md). No HTTP routes yet (TC-35 adds them).
+- `open_workspace(path)` initialises a missing or empty folder, opens one with `.studio/workspace.json`, and refuses
+  anything else with a typed error whose stable `code` the API maps: `workspace_not_empty`, `workspace_not_a_folder`,
+  `workspace_invalid` (with the marker's `reason`), `workspace_in_use`. A refusal writes nothing.
+- The returned `OpenWorkspace` holds an OS lock on `.studio/lock` until `close()` (stdlib `fcntl.flock` /
+  `msvcrt.locking`, no extra dependency). The OS releases it when the process dies, so a killed backend never leaves
+  a stale lock.
+- `AppSettingsStore(settings_dir())` keeps the current and recent workspaces in `settings.json`, in the OS user
+  config dir (`platformdirs`, app folder `rlgym-studio`). **`STUDIO_BACKEND_SETTINGS_DIR`** overrides that folder
+  (tests, or isolated studios). An unreadable file is moved aside and the studio starts from empty settings.
+- `check_project_id` / `derive_project_id`: the slug rules and the derivation from a display name (PO Q3 on TC-42).
+- On Windows every file-system call goes through `layout.os_path` (the `\\?\` form), so paths longer than 260
+  characters work even with `LongPathsEnabled=0`.
+
 ## Develop
 
 From `apps/backend/`:
@@ -122,6 +138,6 @@ uv run --package studio-backend ruff format --check .
 uv run --package studio-backend mypy
 ```
 
-Layout: `src/studio_backend/` (`app.py` factory, `api/` routes, `settings.py`, `logging_config.py`, `errors.py`,
-`server.py` socket binding + handshake), tests in `tests/`. `tests/test_dependencies.py` fails if torch, rlgym or
+Layout: `src/studio_backend/` (`app.py` factory, `api/` routes, `workspace/` (TC-34), `settings.py`,
+`logging_config.py`, `errors.py`, `server.py` socket binding + handshake), tests in `tests/`. `tests/test_dependencies.py` fails if torch, rlgym or
 rlgym-learn ever enters the dependency tree or gets imported.

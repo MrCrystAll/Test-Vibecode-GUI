@@ -16,10 +16,13 @@ from studio_config_schema.envelope import Envelope, UtcTimestamp
 from studio_config_schema.errors import ErrorReason, Issue, SchemaFileError
 from studio_config_schema.migrations import MigrationChainError, Migrations, MigrationStepError
 from studio_config_schema.project import PROJECT_ID_PATTERN, ProjectFile
+from studio_config_schema.workspace import MAX_RECENT_WORKSPACES, AppSettings, WorkspaceMarker
 
 __all__ = [
     "BACKUP_DIR",
+    "MAX_RECENT_WORKSPACES",
     "PROJECT_ID_PATTERN",
+    "AppSettings",
     "Envelope",
     "ErrorReason",
     "Issue",
@@ -30,6 +33,7 @@ __all__ = [
     "ProjectFile",
     "SchemaFileError",
     "UtcTimestamp",
+    "WorkspaceMarker",
     "dump_bytes",
     "dumps",
     "load",
