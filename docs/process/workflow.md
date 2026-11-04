@@ -34,8 +34,22 @@ The human owner has the final say on product direction; the supervisor relays.
 | In Test | Merged into `dev`; waiting for / under QA | Reviewer after merging |
 | Done | QA validated against the acceptance criteria | QA |
 
-Rejected review (Jira transition *Review failed*) and failed QA (*Validation failed*) both send the ticket back to
-**To Do**, keeping its assignee; the reviewer/QA comments why (QA also links a Bug when useful). A developer always picks
+**Transitions** (ids for `transitionJiraIssue`; added by the owner on 2026-11-04 so tickets jump straight to where they go):
+
+| Transition | id | From → to |
+|---|---|---|
+| Start | 4 | To Do → In Progress |
+| Finish dev | 5 | In Progress → To Review |
+| Start review | 2 | To Review or In Progress → In Review |
+| Merged | 6 | any open status before In Test → In Test |
+| Back To Do | 10 | any status → To Do (failed review, failed validation, abandoned start) |
+| Won't do / Duplicate | 9 | To Do → Done |
+| Close Epic | 11 | an epic, any status → Done |
+
+After a merge, use **Merged (6)** directly, whatever the ticket's status: no need to walk it through the others.
+
+Rejected review (Jira transition *Review failed* or *Back To Do*) and failed QA (*Validation failed* or *Back To Do*)
+both send the ticket back to **To Do**, keeping its assignee; the reviewer/QA comments why (QA also links a Bug when useful). A developer always picks
 up **their own returned tickets first**, before new work (JQL: `status = "To Do" AND assignee = currentUser() AND comment ~ "FAILED OR CHANGES REQUESTED"`).
 
 ### Ownership and avoiding duplicate work
