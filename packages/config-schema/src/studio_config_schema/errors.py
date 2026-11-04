@@ -15,6 +15,8 @@ class ErrorReason(StrEnum):
     """Valid JSON, but not a valid document: not an object, missing field, wrong type or value."""
     TOO_NEW = "too_new"
     """`schemaVersion` is newer than this studio supports: written by a newer studio."""
+    MIGRATION_FAILED = "migration_failed"
+    """An older file could not be migrated; the message names the failing step (`v0 -> v1`)."""
 
 
 @dataclass(frozen=True)

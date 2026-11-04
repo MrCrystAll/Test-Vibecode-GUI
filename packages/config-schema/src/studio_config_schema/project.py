@@ -6,6 +6,10 @@ from typing import ClassVar, Literal
 from pydantic import Field, JsonValue
 
 from studio_config_schema.envelope import Envelope, UtcTimestamp
+from studio_config_schema.migrations import Migrations
+
+PROJECT_MIGRATIONS = Migrations("project", current=1).seal()
+"""v1 is the first project format: no steps yet. v2 adds `@PROJECT_MIGRATIONS.step(1)`."""
 
 PROJECT_ID_PATTERN = r"^[a-z0-9-]{1,64}$"
 """Characters and length of a project id. Windows reserved names and id derivation are TC-34's."""
@@ -21,6 +25,7 @@ class ProjectFile(Envelope):
 
     KIND: ClassVar[str] = "project"
     SCHEMA_VERSION: ClassVar[int] = 1
+    MIGRATIONS: ClassVar[Migrations] = PROJECT_MIGRATIONS
 
     kind: Literal["project"] = Field(description="Always `project`.")
     schema_version: Literal[1] = Field(
