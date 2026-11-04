@@ -134,7 +134,7 @@ Rules:
 |---|---|---|---|
 | Static + unit | CI `windows-latest` | CI `ubuntu-latest` | Every PR |
 | API | CI `windows-latest` | CI `ubuntu-latest` | Every PR |
-| E2E | CI `windows-latest` | CI `ubuntu-latest` + xvfb | Every PR; traces and screenshots kept on failure |
+| E2E | CI `windows-latest` | CI `ubuntu-latest` + xvfb | Every PR, required check `e2e (<os>)`; `tests/e2e/` (TC-29); traces, screenshots and logs kept as `e2e-report-<os>` on failure |
 | Manual / exploratory | QA machine (Windows 10) for every beta | Linux machine or VM (WSL2 + WSLg acceptable until installers exist) for every beta | Environment recorded in the beta report |
 | Clean-machine install (1.0.0) | Fresh Windows VM | Fresh Linux VM | Installer and auto-update checks |
 | Real rlgym-learn runs (0.4.0+) | Manual, CPU run of the quick-start template; GPU if available | Manual, CPU run | Never in CI |
@@ -230,8 +230,8 @@ tree are compared with the fake runner's for the same scenario; differences are 
 JSON/log recordings from these runs go to `tests/fixtures/real-runs/`.
 
 ## 10. Betas and regressions
-1. When every story of epic `0.N.0` is Done, QA tags `v0.N.0-beta.1` on `dev` (with `tools/tag-prerelease` once
-   TC-27 lands; until then by hand following the lookup rule in workflow.md) and pushes the tag.
+1. When every story of epic `0.N.0` is Done, QA tags `v0.N.0-beta.1` on `dev` (with `tools/tag-prerelease.py`, see
+   workflow.md "Versioning"; it needs a local `dev` branch, so in a worktree setup tag by hand following the lookup rule) and pushes the tag.
 2. **Full regression on the beta tag**, recorded in `docs/qa/reports/v0.N.0-beta.K.md` from
    [templates/beta-signoff.md](../qa/templates/beta-signoff.md):
    - all CI jobs green on Windows and Linux for the tagged commit;

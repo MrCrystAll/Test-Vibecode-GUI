@@ -4,7 +4,7 @@
 Strategy: [docs/process/test-strategy.md](../../docs/process/test-strategy.md) §2–§5. Story: TC-30.
 
 These tests start the **real backend as a subprocess** and talk to it only through its public contract: the
-command line, the stdout handshake line, stderr log lines, HTTP and (from TC-20) WebSocket. They never import
+command line, the stdout handshake line, stderr log lines, HTTP and WebSocket (`test_websocket.py`: auth, envelope, ping, topics, bad messages, against a real server). They never import
 code from `apps/` or `packages/`; `test_suite_boundaries.py` fails if one does. Developers' unit tests stay next
 to their code (`apps/backend/tests`).
 
@@ -25,7 +25,7 @@ uv run --package studio-api-tests ruff format --check .
 uv run --package studio-api-tests mypy
 ```
 
-CI runs the same command on Windows and Linux once the pipeline exists (TC-26).
+CI runs the same command on Windows and Linux (`checks` job, `tools/ci/run.py`).
 
 ## What the harness gives you (`conftest.py`, `harness/`)
 
@@ -62,7 +62,7 @@ CI uploads them as artefacts (TC-26).
   (repeat the marker for several). The epic test plan (`docs/qa/<version>-test-plan.md`) names the test.
 - **Fixtures are read-only.** Copy them with `copy_fixture` / `workspace_from_fixture`; never write under
   `tests/fixtures/`. Each test works in its own temp dir and, from 0.2.0, its own workspace and
-  `STUDIO_SETTINGS_DIR`.
+  `STUDIO_BACKEND_SETTINGS_DIR`.
 - **Hostile paths by default:** use `hostile_tmp` (or the copy helpers, which already use hostile names).
 - **No sleeps.** Wait for a condition with a deadline (poll an endpoint, read a log line); never `time.sleep(n)`
   as a synchronisation.
