@@ -21,6 +21,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Projects
+         * @description Projects of the open workspace, including those in the `error` state.
+         *
+         *     Errors: `workspace_not_open`.
+         */
+        get: operations["listProjects"];
+        put?: never;
+        /**
+         * Create Project
+         * @description Create a project. Errors: `workspace_not_open`, `invalid_project_id`, `project_id_taken`.
+         *     Emits `project.created`.
+         */
+        post: operations["createProject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Project
+         * @description Errors: `workspace_not_open`, `project_not_found`.
+         */
+        get: operations["getProject"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Project
+         * @description Move the project folder to the trash.
+         *
+         *     Errors: `workspace_not_open`, `project_not_found`, `project_read_only`. Emits
+         *     `project.deleted`.
+         */
+        delete: operations["deleteProject"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Project
+         * @description Rename (display name only), describe, archive or unarchive. The id never changes.
+         *
+         *     Errors: `workspace_not_open`, `project_not_found`, `project_read_only`. Emits
+         *     `project.updated` when something changed.
+         */
+        patch: operations["updateProject"];
+        trace?: never;
+    };
     "/api/version": {
         parameters: {
             query?: never;
@@ -38,10 +99,99 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Workspace
+         * @description The current workspace and its state.
+         */
+        get: operations["getWorkspace"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspace/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Open Workspace
+         * @description Open an existing workspace, or initialise a new one in an empty or missing folder.
+         *
+         *     Errors: `invalid_workspace_path`, `workspace_not_empty` (a non-empty folder that is not a
+         *     workspace), `workspace_in_use` (another studio has it open), `file_invalid` / `file_too_new`
+         *     (its workspace file). Emits `workspace.changed`.
+         */
+        post: operations["openWorkspace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspace/recent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Recent Workspaces
+         * @description Workspaces opened before, most recent first.
+         */
+        get: operations["getRecentWorkspaces"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** CreateProjectRequest */
+        CreateProjectRequest: {
+            /** Description */
+            description?: string | null;
+            /**
+             * Id
+             * @description Folder name. Omitted: derived from `name` and never taken. Given: used as is, or refused with `invalid_project_id` / `project_id_taken`.
+             */
+            id?: string | null;
+            /**
+             * Name
+             * @description Display name.
+             */
+            name: string;
+        };
+        /** DeletedProject */
+        DeletedProject: {
+            /** Id */
+            id: string;
+            /**
+             * Trash Path
+             * @description Where the folder went, when the backend knows it (OS trash: `null`).
+             */
+            trash_path: string | null;
+        };
         /** EmptyPayload */
         EmptyPayload: Record<string, never>;
         /** ErrorDetail */
@@ -75,6 +225,38 @@ export interface components {
         ErrorResponse: {
             error: components["schemas"]["ErrorDetail"];
         };
+        /** FileIssue */
+        FileIssue: {
+            /** Message */
+            message: string;
+            /**
+             * Pointer
+             * @description RFC 6901 JSON pointer; `""` is the whole document.
+             */
+            pointer: string;
+        };
+        /**
+         * FileProblem
+         * @description Where a file is broken. `details` of a `file_invalid`, `file_too_new` or
+         *     `migration_failed` error, and `Problem.file`.
+         */
+        FileProblem: {
+            /**
+             * Issues
+             * @description Every issue found, at least one.
+             */
+            issues: components["schemas"]["FileIssue"][];
+            /**
+             * Path
+             * @description Absolute path of the file.
+             */
+            path: string;
+            /**
+             * Pointer
+             * @description Pointer of the first issue.
+             */
+            pointer: string;
+        };
         /** HealthResponse */
         HealthResponse: {
             /**
@@ -82,6 +264,156 @@ export interface components {
              * @constant
              */
             status: "ok";
+        };
+        JsonValue: unknown;
+        /** OpenWorkspaceRequest */
+        OpenWorkspaceRequest: {
+            /**
+             * Path
+             * @description Absolute folder path. An existing workspace is opened; an empty or missing folder is initialised as a new workspace.
+             */
+            path: string;
+        };
+        /**
+         * Problem
+         * @description Why a workspace or project is in the `error` state.
+         */
+        Problem: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "workspace_not_open" | "workspace_in_use" | "workspace_not_empty" | "invalid_workspace_path" | "project_not_found" | "project_id_taken" | "invalid_project_id" | "project_read_only" | "file_invalid" | "file_too_new" | "migration_failed";
+            file?: components["schemas"]["FileProblem"] | null;
+            /** Message */
+            message: string;
+        };
+        /**
+         * Project
+         * @description One project folder of the workspace.
+         *
+         *     `status: "error"` projects are listed so the user can see and fix them, but they are read-only:
+         *     `PATCH` and `DELETE` answer `project_read_only`.
+         */
+        Project: {
+            /** @description The parsed `project.json` (TC-32 schema); `null` when it can't be read. */
+            file: components["schemas"]["ProjectFile"] | null;
+            /**
+             * Id
+             * @description The folder name. Immutable.
+             */
+            id: string;
+            /**
+             * Path
+             * @description Absolute path of the project folder.
+             */
+            path: string;
+            /** @description Set when `status` is `error`. */
+            problem?: components["schemas"]["Problem"] | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "error";
+        };
+        /** ProjectEventPayload */
+        ProjectEventPayload: {
+            /** Project Id */
+            project_id: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "app" | "external";
+        };
+        /**
+         * ProjectFile
+         * @description A studio project, stored as `<workspace>/<id>/project.json`.
+         *
+         *     Unknown top-level keys are kept on round-trip, so a newer studio's fields and hand-added keys
+         *     survive a save by this studio. `upstream` holds the rlgym-learn configuration verbatim as opaque
+         *     JSON; the studio does not interpret it here.
+         */
+        ProjectFile: {
+            /**
+             * Archived
+             * @description Archived projects are hidden by default.
+             * @default false
+             */
+            archived: boolean;
+            /**
+             * Createdat
+             * @description Creation time, ISO-8601 UTC (`YYYY-MM-DDTHH:MM:SSZ`).
+             */
+            createdAt: string;
+            /**
+             * Description
+             * @description Optional free-text description.
+             */
+            description?: string | null;
+            /**
+             * Id
+             * @description The project's folder name: lowercase `a-z`, `0-9` and `-`, 1 to 64 characters. Immutable: renaming a project changes `name` only.
+             */
+            id: string;
+            /**
+             * Kind
+             * @description Always `project`.
+             * @constant
+             */
+            kind: "project";
+            /**
+             * Name
+             * @description Display name, 1 to 100 characters.
+             */
+            name: string;
+            /**
+             * Schemaversion
+             * @description Version of the project file format. This schema describes version 1.
+             * @constant
+             */
+            schemaVersion: 1;
+            /**
+             * Updatedat
+             * @description Last change, ISO-8601 UTC (`YYYY-MM-DDTHH:MM:SSZ`).
+             */
+            updatedAt: string;
+            /**
+             * Upstream
+             * @description The rlgym-learn configuration, verbatim and opaque to this schema. Empty (`null` or absent) until 0.3.0.
+             */
+            upstream?: {
+                [key: string]: components["schemas"]["JsonValue"];
+            } | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ProjectList */
+        ProjectList: {
+            /**
+             * Items
+             * @description Sorted by id.
+             */
+            items: components["schemas"]["Project"][];
+        };
+        /** RecentWorkspace */
+        RecentWorkspace: {
+            /**
+             * Opened At
+             * Format: date-time
+             * @description Last time it was opened, ISO-8601 UTC.
+             */
+            opened_at: string;
+            /** Path */
+            path: string;
+        };
+        /** RecentWorkspaces */
+        RecentWorkspaces: {
+            /**
+             * Items
+             * @description Most recent first.
+             */
+            items: components["schemas"]["RecentWorkspace"][];
         };
         /**
          * ReplyPayload
@@ -98,9 +430,9 @@ export interface components {
         TopicPayload: {
             /**
              * Topic
-             * @constant
+             * @enum {string}
              */
-            topic: "system";
+            topic: "system" | "workspace";
         };
         /** TopicReplyPayload */
         TopicReplyPayload: {
@@ -108,9 +440,21 @@ export interface components {
             reply_to: string;
             /**
              * Topic
-             * @constant
+             * @enum {string}
              */
-            topic: "system";
+            topic: "system" | "workspace";
+        };
+        /**
+         * UpdateProjectRequest
+         * @description Only the fields sent change. `description: null` clears it. The id never changes.
+         */
+        UpdateProjectRequest: {
+            /** Archived */
+            archived?: boolean | null;
+            /** Description */
+            description?: string | null;
+            /** Name */
+            name?: string | null;
         };
         /** VersionResponse */
         VersionResponse: {
@@ -118,6 +462,56 @@ export interface components {
             api_version: string;
             /** App Version */
             app_version: string;
+        };
+        /**
+         * Workspace
+         * @description The workspace the backend works in. At most one is open at a time.
+         */
+        Workspace: {
+            /**
+             * Path
+             * @description Absolute path; `null` in the `none` state.
+             */
+            path: string | null;
+            /** @description Set in the `error` state only. */
+            problem?: components["schemas"]["Problem"] | null;
+            /**
+             * State
+             * @description `none`: nothing opened yet. `open`: ready. `error`: see `problem`.
+             * @enum {string}
+             */
+            state: "none" | "open" | "error";
+            /**
+             * Watching
+             * @description Whether external edits are seen live. `false`: the UI should offer a refresh.
+             */
+            watching: boolean;
+        };
+        /**
+         * WorkspaceChangedPayload
+         * @description The open workspace changed: opened, switched, closed, or its state changed.
+         */
+        WorkspaceChangedPayload: {
+            /** Path */
+            path: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "app" | "external";
+        };
+        /** @enum {string} */
+        WorkspaceErrorCode: "workspace_not_open" | "workspace_in_use" | "workspace_not_empty" | "invalid_workspace_path" | "project_not_found" | "project_id_taken" | "invalid_project_id" | "project_read_only" | "file_invalid" | "file_too_new" | "migration_failed";
+        /**
+         * WorkspaceRescannedPayload
+         * @description The project index was rebuilt; anything listed before may have changed.
+         */
+        WorkspaceRescannedPayload: {
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "app" | "external";
         };
         WsClientMessage: components["schemas"]["WsPing"] | components["schemas"]["WsPong"] | components["schemas"]["WsSubscribe"] | components["schemas"]["WsUnsubscribe"];
         /**
@@ -195,7 +589,82 @@ export interface components {
              */
             version: 1;
         };
-        WsServerMessage: components["schemas"]["WsPing"] | components["schemas"]["WsPong"] | components["schemas"]["WsSubscribed"] | components["schemas"]["WsUnsubscribed"] | components["schemas"]["WsError"];
+        /**
+         * WsProjectCreated
+         * @description Topic `workspace`: a project appeared. Fetch it with `GET /api/projects/{id}`.
+         */
+        WsProjectCreated: {
+            /** Id */
+            id: string;
+            payload: components["schemas"]["ProjectEventPayload"];
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "project.created";
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
+        };
+        /**
+         * WsProjectDeleted
+         * @description Topic `workspace`: a project is gone (moved to the trash, or its folder removed).
+         */
+        WsProjectDeleted: {
+            /** Id */
+            id: string;
+            payload: components["schemas"]["ProjectEventPayload"];
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "project.deleted";
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
+        };
+        /**
+         * WsProjectUpdated
+         * @description Topic `workspace`: a project's file changed (rename, description, archive, hand edit).
+         */
+        WsProjectUpdated: {
+            /** Id */
+            id: string;
+            payload: components["schemas"]["ProjectEventPayload"];
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "project.updated";
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
+        };
+        WsServerMessage: components["schemas"]["WsPing"] | components["schemas"]["WsPong"] | components["schemas"]["WsSubscribed"] | components["schemas"]["WsUnsubscribed"] | components["schemas"]["WsError"] | components["schemas"]["WsProjectCreated"] | components["schemas"]["WsProjectUpdated"] | components["schemas"]["WsProjectDeleted"] | components["schemas"]["WsWorkspaceChanged"] | components["schemas"]["WsWorkspaceRescanned"];
         /**
          * WsSubscribe
          * @description Client: start receiving events of a topic.
@@ -296,6 +765,56 @@ export interface components {
              */
             version: 1;
         };
+        /**
+         * WsWorkspaceChanged
+         * @description Topic `workspace`: re-read `GET /api/workspace` and the project list.
+         */
+        WsWorkspaceChanged: {
+            /** Id */
+            id: string;
+            payload: components["schemas"]["WorkspaceChangedPayload"];
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "workspace.changed";
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
+        };
+        /**
+         * WsWorkspaceRescanned
+         * @description Topic `workspace`: re-read the project list.
+         */
+        WsWorkspaceRescanned: {
+            /** Id */
+            id: string;
+            payload: components["schemas"]["WorkspaceRescannedPayload"];
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "workspace.rescanned";
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
+        };
     };
     responses: never;
     parameters: never;
@@ -334,6 +853,168 @@ export interface operations {
             };
         };
     };
+    listProjects: {
+        parameters: {
+            query?: {
+                /** @description `false` (default): active only; `true`; `all`. */
+                archived?: "false" | "true" | "all";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectList"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    createProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProjectRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Project"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Project"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deleteProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeletedProject"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProjectRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Project"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     getVersion: {
         parameters: {
             query?: never;
@@ -350,6 +1031,97 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VersionResponse"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Workspace"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    openWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenWorkspaceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Workspace"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getRecentWorkspaces: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecentWorkspaces"];
                 };
             };
             /** @description Error */

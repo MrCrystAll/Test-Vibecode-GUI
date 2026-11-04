@@ -860,6 +860,7 @@ version = "0.1.0"
 source = { editable = "apps/backend" }
 dependencies = [
     { name = "fastapi" },
+    { name = "studio-config-schema" },
     { name = "uvicorn" },
     { name = "websockets" },
 ]
@@ -876,6 +877,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "studio-config-schema", editable = "packages/config-schema" },
     { name = "uvicorn", specifier = ">=0.32" },
     { name = "websockets", specifier = ">=13" },
 ]

@@ -50,4 +50,20 @@ describe('createApiClient', () => {
     expect(response.status).toBe(401);
     expect(error).toEqual(body);
   });
+
+  it('types the project routes: path and query parameters, JSON body', async () => {
+    const { fetch, requests } = recordingFetch({ items: [] });
+    const client = createApiClient({ baseUrl: 'http://127.0.0.1:5000', getToken: () => 't', fetch });
+
+    await client.GET('/api/projects', { params: { query: { archived: 'all' } } });
+    await client.PATCH('/api/projects/{project_id}', {
+      params: { path: { project_id: 'equipe-7' } },
+      body: { archived: true },
+    });
+
+    expect(requests[0]?.url).toBe('http://127.0.0.1:5000/api/projects?archived=all');
+    expect(requests[1]?.method).toBe('PATCH');
+    expect(requests[1]?.url).toBe('http://127.0.0.1:5000/api/projects/equipe-7');
+    expect(await requests[1]?.json()).toEqual({ archived: true });
+  });
 });

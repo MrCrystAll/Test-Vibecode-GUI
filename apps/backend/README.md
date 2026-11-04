@@ -93,7 +93,7 @@ message), so the UI gets them from the same generator as the HTTP client.
 | client → server | `ping` | `{}` | answered with `pong` |
 | server → client | `pong` | `{"reply_to": id}` | |
 | client → server | `pong` | `{"reply_to": id?}` | accepted, no answer |
-| client → server | `subscribe` / `unsubscribe` | `{"topic": "system"}` | only `system` exists for now |
+| client → server | `subscribe` / `unsubscribe` | `{"topic": "system" \| "workspace"}` | |
 | server → client | `subscribed` / `unsubscribed` | `{"topic", "reply_to"}` | |
 | server → client | `error` | `{"code", "message", "reply_to"?}` | the connection stays open |
 
@@ -101,9 +101,28 @@ message), so the UI gets them from the same generator as the HTTP client.
 `unsupported_version`, `unknown_type`, `unknown_topic`, `invalid_payload`. A connection without `studio.v1` is closed
 with `1008`.
 
-### API (0.1.0)
+Topic `workspace` (TC-35) carries server events; each tells the UI what to re-fetch. `source` is `"app"` when
+this studio made the change, `"external"` when someone edited the files.
+
+| type | payload |
+|---|---|
+| `project.created` / `project.updated` / `project.deleted` | `{"project_id", "source"}` |
+| `workspace.changed` | `{"path", "source"}` (re-read `GET /api/workspace` and the list) |
+| `workspace.rescanned` | `{"source"}` (re-read the list) |
+
+### API (0.2.0)
 - `GET /api/health` → `200 {"status": "ok"}` (no token needed: liveness probe)
 - `GET /api/version` (token) → `200 {"app_version": "<package version>", "api_version": "<contract version>"}`
+- Workspace and projects (TC-35, token): `GET /api/workspace`, `POST /api/workspace/open {path}`,
+  `GET /api/workspace/recent`, `GET /api/projects?archived=false|true|all`, `POST /api/projects {name, id?, description?}`,
+  `GET|PATCH|DELETE /api/projects/{id}`. A project's `file` is the TC-32 `ProjectFile` (camelCase keys, as on disk).
+  Served by the in-memory stub (`workspace/stub.py`) until the file-system service replaces it in
+  `workspace.default_service()`.
+- Workspace error codes (`WorkspaceErrorCode` in the contract) and their status: `invalid_workspace_path`,
+  `invalid_project_id` → 400; `project_not_found` → 404; `workspace_not_open`, `workspace_in_use`,
+  `workspace_not_empty`, `project_id_taken`, `project_read_only`, `file_invalid`, `file_too_new`,
+  `migration_failed` → 409. `file_invalid`, `file_too_new` and `migration_failed` carry a `FileProblem`
+  (`path`, `pointer`, `issues`) in `details`. Clients show a generic message for a code they don't know.
 - Every error response has one shape (refined to problem+json in 0.9.0):
   `{"error": {"code": "not_found", "message": "Not Found", "details": null}}`. `code` is stable and meant for
   clients; `message` is for developers and logs.

@@ -7,7 +7,7 @@ DISTRIBUTION_NAME = "studio-backend"
 
 # Version of the HTTP/WS contract, independent of the app version. Bumped by hand when the
 # contract changes; frozen under semver from 1.0.0 (CLAUDE.md rule 2).
-API_VERSION = "0.1.0"
+API_VERSION = "0.2.0"
 
 
 def app_version() -> str:

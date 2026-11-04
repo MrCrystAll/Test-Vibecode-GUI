@@ -19,8 +19,8 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 PROTOCOL_VERSION: Literal[1] = 1
 SUBPROTOCOL = "studio.v1"
 
-Topic = Literal["system"]
-TOPICS: tuple[Topic, ...] = ("system",)
+Topic = Literal["system", "workspace"]
+TOPICS: tuple[Topic, ...] = ("system", "workspace")
 
 ErrorCode = Literal[
     "invalid_json",
@@ -86,6 +86,34 @@ class ErrorPayload(BaseModel):
     reply_to: str | None = None
 
 
+EventSource = Literal["app", "external"]
+"""Who caused a workspace event: this studio (`app`) or someone editing the files (`external`)."""
+
+
+class ProjectEventPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    project_id: str
+    source: EventSource
+
+
+class WorkspaceChangedPayload(BaseModel):
+    """The open workspace changed: opened, switched, closed, or its state changed."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    path: str | None
+    source: EventSource
+
+
+class WorkspaceRescannedPayload(BaseModel):
+    """The project index was rebuilt; anything listed before may have changed."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    source: EventSource
+
+
 # --- messages ------------------------------------------------------------------------------------
 
 
@@ -138,11 +166,64 @@ class WsError(_Message):
     payload: ErrorPayload
 
 
+class WsProjectCreated(_Message):
+    """Topic `workspace`: a project appeared. Fetch it with `GET /api/projects/{id}`."""
+
+    type: Literal["project.created"] = "project.created"
+    payload: ProjectEventPayload
+
+
+class WsProjectUpdated(_Message):
+    """Topic `workspace`: a project's file changed (rename, description, archive, hand edit)."""
+
+    type: Literal["project.updated"] = "project.updated"
+    payload: ProjectEventPayload
+
+
+class WsProjectDeleted(_Message):
+    """Topic `workspace`: a project is gone (moved to the trash, or its folder removed)."""
+
+    type: Literal["project.deleted"] = "project.deleted"
+    payload: ProjectEventPayload
+
+
+class WsWorkspaceChanged(_Message):
+    """Topic `workspace`: re-read `GET /api/workspace` and the project list."""
+
+    type: Literal["workspace.changed"] = "workspace.changed"
+    payload: WorkspaceChangedPayload
+
+
+class WsWorkspaceRescanned(_Message):
+    """Topic `workspace`: re-read the project list."""
+
+    type: Literal["workspace.rescanned"] = "workspace.rescanned"
+    payload: WorkspaceRescannedPayload
+
+
+WsWorkspaceEvent = (
+    WsProjectCreated
+    | WsProjectUpdated
+    | WsProjectDeleted
+    | WsWorkspaceChanged
+    | WsWorkspaceRescanned
+)
+
 WsClientMessage = Annotated[
     WsPing | WsPong | WsSubscribe | WsUnsubscribe, Field(discriminator="type")
 ]
 WsServerMessage = Annotated[
-    WsPing | WsPong | WsSubscribed | WsUnsubscribed | WsError, Field(discriminator="type")
+    WsPing
+    | WsPong
+    | WsSubscribed
+    | WsUnsubscribed
+    | WsError
+    | WsProjectCreated
+    | WsProjectUpdated
+    | WsProjectDeleted
+    | WsWorkspaceChanged
+    | WsWorkspaceRescanned,
+    Field(discriminator="type"),
 ]
 
 CLIENT_TYPES = frozenset({"ping", "pong", "subscribe", "unsubscribe"})

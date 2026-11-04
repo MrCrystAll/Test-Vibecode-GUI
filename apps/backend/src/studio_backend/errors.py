@@ -51,6 +51,20 @@ _CODES_BY_STATUS = {
 }
 
 
+class ApiError(Exception):
+    """A domain error with its own stable `code` (e.g. `project_not_found`), raised by services.
+
+    The handler turns it into the one error shape with `status_code`.
+    """
+
+    def __init__(self, status_code: int, code: str, message: str, details: Any = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.code = code
+        self.message = message
+        self.details = details
+
+
 def error_body(code: str, message: str, details: Any = None) -> dict[str, Any]:
     return {"error": {"code": code, "message": message, "details": details}}
 
@@ -81,6 +95,15 @@ async def _validation_exception_handler(_: Request, exc: Exception) -> JSONRespo
     )
 
 
+async def _api_error_handler(_: Request, exc: Exception) -> JSONResponse:
+    if not isinstance(exc, ApiError):  # pragma: no cover
+        raise exc
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=error_body(exc.code, exc.message, jsonable_encoder(exc.details)),
+    )
+
+
 async def _unhandled_exception_handler(_: Request, exc: Exception) -> JSONResponse:
     logger.error("Unhandled error", exc_info=exc)
     return JSONResponse(
@@ -91,4 +114,5 @@ async def _unhandled_exception_handler(_: Request, exc: Exception) -> JSONRespon
 def install_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(StarletteHTTPException, _http_exception_handler)
     app.add_exception_handler(RequestValidationError, _validation_exception_handler)
+    app.add_exception_handler(ApiError, _api_error_handler)
     app.add_exception_handler(Exception, _unhandled_exception_handler)

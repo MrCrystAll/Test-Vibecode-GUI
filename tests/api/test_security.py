@@ -180,7 +180,8 @@ def test_route_requires_the_token(backend: BackendProcess, method: str, path: st
         assert _error_code(rejected) == "unauthorized"
     assert right.status_code != 401
     if method == "GET" and "x" not in path.split("/")[-1:]:
-        assert right.status_code == 200
+        # Project routes answer 409 `workspace_not_open` until a workspace is opened (TC-35).
+        assert right.status_code == 200 or _error_code(right) == "workspace_not_open"
 
 
 @pytest.mark.ac("TC-19", 3)
