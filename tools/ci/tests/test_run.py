@@ -149,8 +149,12 @@ class MainTest(unittest.TestCase):
 
         run.step_e2e(runner)
 
-        self.assertEqual(len(runner.commands), 1)
-        self.assertEqual(runner.commands[0][-4:], ["--filter", "@studio/e2e", "run", "e2e"])
+        self.assertEqual(len(runner.commands), 2)
+        # TC-48: the Electron binary is checked first, so a missing one fails with the fix.
+        self.assertEqual(
+            runner.commands[0][-4:], ["--filter", "@studio/desktop", "run", "check-electron"]
+        )
+        self.assertEqual(runner.commands[1][-4:], ["--filter", "@studio/e2e", "run", "e2e"])
 
     def test_hook_scripts_live_in_the_repository(self) -> None:
         for name, relative, _args in run.HOOKS:
