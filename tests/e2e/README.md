@@ -71,6 +71,21 @@ test('the project list shows the workspace projects', { tag: ['@TC-39', '@TC-39-
 [apps/desktop/README.md](../../apps/desktop/README.md): `STUDIO_BACKEND_CMD` (a JSON array: the command that replaces the
 backend), `STUDIO_BACKEND_STARTUP_TIMEOUT_MS`, `STUDIO_UI_URL`.
 
+### Answering the folder dialog: `STUDIO_E2E_SELECT_DIRECTORY` (TC-46)
+A test cannot click in a native OS dialog, so the shell has a hook for `window.studio.selectDirectory()`. Start the app
+in **test mode** and give it the answer:
+
+```ts
+const studio = await launchApp({
+  env: { STUDIO_E2E: '1', STUDIO_E2E_SELECT_DIRECTORY: workspaceDir }, // or '__cancel__' for "the user cancelled"
+});
+```
+
+The dialog is then never opened: every `selectDirectory()` call resolves to that path (or `null` for `__cancel__`), and
+`main.log` says `test mode: selectDirectory answered by STUDIO_E2E_SELECT_DIRECTORY`. Without `STUDIO_E2E=1` the
+variable is ignored and the real dialog opens; a packaged app ignores both. Use a path with a space and a non-ASCII
+character (e.g. under `studio.userData`) so path handling is exercised too.
+
 What `StudioApp` gives you: `window` (Playwright `Page`), `electronApp`, `userData`, `readLog('main.log' | 'backend.log')`,
 `backendInfo()` (pid and port from `main.log`), `quit()` (like Quit in a menu), `closeWindow()` (the title-bar ✕).
 In `page.evaluate` callbacks `window` is the browser's: keep the Playwright page in a variable called `page`.

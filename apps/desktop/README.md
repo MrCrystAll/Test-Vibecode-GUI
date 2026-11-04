@@ -61,8 +61,19 @@ the attempt's process tree, and the UI shows the error with **Retry** and **Quit
 
 ## Renderer security (TC-23 AC2)
 `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`. The preload (`preload.ts`) exposes only
-`window.studio`: `getBackendConnection()`, `getStartupState()`, `onStartupState(listener)`, `retryBackend()`, `quit()`.
-The window refuses pop-ups and navigation to any other origin.
+`window.studio`, and nothing else:
+
+| Function | What it does |
+|---|---|
+| `getBackendConnection()` | `{ baseUrl, wsUrl, token }` once the backend is ready; rejects before |
+| `getStartupState()` / `onStartupState(listener)` | the backend's startup phase (never the token); the listener form returns an unsubscribe function |
+| `retryBackend()` | starts a new backend after a failure or a crash |
+| `quit()` | quits the app (stops the backend first) |
+| `selectDirectory()` | opens the native folder dialog (with "new folder"), resolves to the chosen path or `null` on cancel (TC-46) |
+
+The window refuses pop-ups and navigation to any other origin. Calls that open something on the desktop
+(`selectDirectory`) are honoured only from the studio window's top frame at the UI origin; any other sender gets a
+rejected promise (`select-directory.ts`). The renderer gets back a path string only, never file-system access.
 
 ## Configuration (dev and test)
 | Flag / env var | Effect |
@@ -71,6 +82,8 @@ The window refuses pop-ups and navigation to any other origin.
 | `STUDIO_UI_URL` | load the UI from this URL (e.g. `ng serve`) instead of the built files |
 | `STUDIO_BACKEND_CMD` | backend command as a JSON array, e.g. a fake backend for tests (it gets `STUDIO_BACKEND_SHUTDOWN_ON_STDIN_EOF=1` too) |
 | `STUDIO_BACKEND_STARTUP_TIMEOUT_MS` | startup timeout (default 30000) |
+| `STUDIO_E2E=1` | **test mode** (ignored by a packaged app): enables the e2e hooks below |
+| `STUDIO_E2E_SELECT_DIRECTORY` | test mode only: `selectDirectory()` answers this path without a dialog; `__cancel__` answers `null` |
 | `STUDIO_E2E_NO_SANDBOX=1` | Chromium `--no-sandbox`, **only** for Linux CI containers (with `xvfb-run`); the renderer stays sandboxed |
 
 Logs: `<userData>/logs/main.log` (the shell: `backend starting`, `backend started pid=… port=…`, failures, exit) and
